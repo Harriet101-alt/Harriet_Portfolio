@@ -262,51 +262,52 @@ const Projects = () => {
       description: "Developed a multi-criteria site scoring application in ArcGIS integrating government open data (Housing Delivery Test scores, Land Registry house prices, Environment Agency ecological constraints, OS amenity layers) to rank candidate sites by planning permission viability.",
       technologies: ["ArcGIS", "Open Data", "Planning"],
       detailsUrl: "https://storymaps.arcgis.com/stories/f59512cff20a4ebeb8b14570cfbae7fa",
-      githubUrl: "https://storymaps.arcgis.com/stories/f59512cff20a4ebeb8b14570cfbae7fa",
+      githubUrl: "https://github.com/Harriet101-alt/Land_Appraisal",
       isStoryMap: true,
     },
     {
       title: "Regulatory Compliance Checker",
       description: "Architected a Next.js pipeline that cross-references promotional drug content against regulatory guidelines at build time, surfacing non-compliant copy as flagged warnings and eliminating a class of pre-launch manual review for regulated digital assets.",
       technologies: ["Next.js", "TypeScript", "Regulatory Review"],
-      detailsUrl: safeLink(socialLinks.repositories.projectTwo),
-      githubUrl: safeLink(socialLinks.repositories.projectTwo)
+      detailsUrl: "https://github.com/binarybelt/cxiai-group12",
+      githubUrl: "https://github.com/binarybelt/cxiai-group12"
+    },
+    {
+      title: "Parts of Speech Tagging (POS)",
+      description: "Engineered an end-to-end clinical NLP pipeline (BiLSTM & Transformer, PyTorch) with torchtext tokenisation and Optuna Bayesian hyperparameter optimisation.",
+      technologies: ["PyTorch", "Transformer", "BiLSTM", "Optuna"],
+      detailsUrl: "https://github.com/atanilson/Applied_AI_Assignments/blob/main/COMP634_assignment3_Test.ipynb",
+      githubUrl: "https://github.com/atanilson/Applied_AI_Assignments/blob/main/COMP634_assignment3_Test.ipynb"
+    },
+    {
+      title: "Geospatial Socioeconomic Analysis",
+      description: "Applied LISA spatial autocorrelation and DBSCAN clustering to Census API geodata to identify income-inequality hotspots across Austin, TX.",
+      technologies: ["QGIS", "DBSCAN", "GeoPandas", "Census API"],
+      detailsUrl: "https://github.com/Harriet101-alt/Texas_Maps",
+      githubUrl: "https://github.com/Harriet101-alt/Texas_Maps"
+    },
+    {
+      title: "Obesity Classifier for Health Risk Prediction",
+      description: "Trained a Random Forest classifier on 2,111 clinical records achieving 0.96 F1 / 0.999 AUC; stratified K-Fold CV and correlation-matrix pre-processing addressed class imbalance and multicollinearity.",
+      technologies: ["Python", "Random Forest", "Sci-kit Learn"],
+      detailsUrl: "https://github.com/atanilson/Applied_AI_Assignments/tree/main/assignment1",
+      githubUrl: "https://github.com/atanilson/Applied_AI_Assignments/tree/main/assignment1"
+    },
+    {
+      title: "Mapped Population Change Across Africa",
+      description: "Reprojected raster data to equal-area CRS, applied accessible diverging colour schemes, and implemented tooltip interactivity for spatial exploration of population density change throughout Africa (2015-2025).",
+      technologies: ["Raster", "QGIS", "Visualization"],
+      detailsUrl: "https://github.com/Harriet101-alt/Africa-Population-Change15-25",
+      githubUrl: "https://github.com/Harriet101-alt/Africa-Population-Change15-25"
     },
     {
       title: "Distributed Task-Scheduling Architecture",
       description: "A 500-task, 5-server automation environment was suffering race conditions and uneven load distribution. Formalised the problem as a CSP and architected a DAG traversal engine with dependency-aware batching heuristics.",
       technologies: ["Python", "CSP", "DAG"],
       detailsUrl: safeLink(socialLinks.repositories.projectThree),
-      githubUrl: safeLink(socialLinks.repositories.projectThree)
+      githubUrl: safeLink(socialLinks.repositories.projectThree),
+      hideCode: true,
     },
-    {
-      title: "Parts of Speech Tagging (POS)",
-      description: "Engineered an end-to-end clinical NLP pipeline (BiLSTM & Transformer, PyTorch) with torchtext tokenisation and Optuna Bayesian hyperparameter optimisation.",
-      technologies: ["PyTorch", "Transformer", "BiLSTM", "Optuna"],
-      detailsUrl: safeLink(socialLinks.repositories.projectFour),
-      githubUrl: safeLink(socialLinks.repositories.projectFour)
-    },
-    {
-      title: "Geospatial Socioeconomic Analysis",
-      description: "Applied LISA spatial autocorrelation and DBSCAN clustering to Census API geodata to identify income-inequality hotspots across Austin, TX.",
-      technologies: ["QGIS", "DBSCAN", "GeoPandas", "Census API"],
-      detailsUrl: safeLink(),
-      githubUrl: safeLink()
-    },
-    {
-      title: "Obesity Classifier for Health Risk Prediction",
-      description: "Trained a Random Forest classifier on 2,111 clinical records achieving 0.96 F1 / 0.999 AUC; stratified K-Fold CV and correlation-matrix pre-processing addressed class imbalance and multicollinearity.",
-      technologies: ["Python", "Random Forest", "Sci-kit Learn"],
-      detailsUrl: safeLink(),
-      githubUrl: safeLink()
-    },
-    {
-      title: "Mapping Population Change Across Africa",
-      description: "Reprojected raster data to equal-area CRS, applied accessible diverging colour schemes, and implemented tooltip interactivity for spatial exploration of population density change throughout Africa (2015-2025).",
-      technologies: ["Raster", "QGIS", "Visualization"],
-      detailsUrl: safeLink(),
-      githubUrl: safeLink()
-    }
   ];
 
   // Calculate carousel pagination
@@ -532,24 +533,34 @@ const Projects = () => {
                   </div>
                    <div className="flex gap-3" style={{ marginTop: 'auto', paddingTop: '8px' }}>
                     {'isStoryMap' in project && project.isStoryMap ? (
-                      <button
-                        onClick={() => setStoryMapOpen(true)}
-                        className="project-btn flex items-center gap-1"
-                        aria-label={`View ${project.title} StoryMap`}
-                      >
-                        <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                        View StoryMap
-                      </button>
-                    ) : (
+                     <>
+                       <button
+                         onClick={() => setStoryMapOpen(true)}
+                         className="project-btn flex items-center gap-1"
+                         aria-label={`View ${project.title} StoryMap`}
+                       >
+                         <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                         View StoryMap
+                       </button>
+                       {project.githubUrl && (
+                         <a href={project.githubUrl} className="project-btn-outline flex items-center gap-1" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} source code on GitHub`}>
+                           <Code className="h-4 w-4" aria-hidden="true" />
+                           Code
+                         </a>
+                       )}
+                     </>
+                   ) : (
                       <>
-                        <a href={project.detailsUrl} className="project-btn flex items-center gap-1" style={{ textDecoration: 'none', color: 'white' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} project details`}>
-                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                          Details
-                        </a>
-                        <a href={project.githubUrl} className="project-btn-outline flex items-center gap-1" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} source code on GitHub`}>
-                          <Code className="h-4 w-4" aria-hidden="true" />
-                          Code
-                        </a>
+                       <a href={project.detailsUrl} className="project-btn flex items-center gap-1" style={{ textDecoration: 'none', color: 'white' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} project details`}>
+                         <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                         Details
+                       </a>
+                       {!('hideCode' in project && project.hideCode) && (
+                         <a href={project.githubUrl} className="project-btn-outline flex items-center gap-1" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} source code on GitHub`}>
+                           <Code className="h-4 w-4" aria-hidden="true" />
+                           Code
+                         </a>
+                       )}
                       </>
                     )}
                   </div>

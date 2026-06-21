@@ -65,22 +65,17 @@ const getSpreads = (): Page[] => [
           <p style={styles.stampHeader}>FIELD NOTES</p>
           <p style={styles.stampName}>Harriet Fletcher</p>
           <div style={styles.stampRule} />
-          <p style={styles.stampRole}>Junior Developer</p>
-          <p style={styles.stampCompany}>Pfizer &middot; Jakala</p>
+          <p style={styles.stampRole}>The story of my Career</p>
           <p style={styles.stampLocation}>Liverpool &middot; 2026</p>
         </div>
-        <p style={styles.coverHint}>click → to begin reading</p>
       </div>
     ),
     right: (
       <div style={styles.photoPage}>
         <div style={styles.photoFrame}>
           <img src={profilePlane} alt="Harriet" style={styles.photo} />
-          <p style={styles.photoCaption}>fig. 1 — the naturalist turned developer</p>
+          <p style={styles.photoCaption}>fig. 1 — I've travelled to many destinations near and far both figuratively and in actuality</p>
         </div>
-        <p style={styles.handNote}>
-          "I spent years reading ecosystems before I ever read a codebase."
-        </p>
       </div>
     ),
   },
