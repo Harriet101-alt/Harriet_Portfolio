@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
-import { profile1 } from '../../assets';
+import { profile1, profile2, profile3 } from '../../assets';
 
 // This is a literal physical object (a real conference ID badge), so its
 // colours are fixed hex values rather than theme tokens — it does not
@@ -23,7 +23,7 @@ const MAX_ROTATION = 35;
 const DRAG_ROTATION_FACTOR = 0.3;
 const PROXIMITY_RADIUS = 160;
 const PROXIMITY_MAX_ROTATION = 10;
-const SCROLL_SWING_AMPLITUDE = 20;
+const SCROLL_SWING_AMPLITUDE = 8;
 
 const springConfig = { tension: 280, friction: 28, mass: 1 };
 
@@ -31,10 +31,14 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export default function Lanyard() {
+export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const hasSettledRef = useRef<boolean>(false);
+  const lastScrollYRef = useRef<number>(typeof window !== 'undefined' ? window.scrollY : 0);
+
+  const PHOTOS = [profile1, profile2, profile3];
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // y: vertical drop offset (starts -180 = above rest position)
   // rotation: pendulum swing angle — starts at 0, no initial tilt
@@ -51,10 +55,10 @@ export default function Lanyard() {
         // Phase 1 — fall under gravity
         await next({ y: 0, config: { tension: 210, friction: 16, mass: 1.4 } });
         // Phase 2 — gentle symmetric decay: left first so both sides are equally visible
-        await next({ rotation: -10, config: { tension: 180, friction: 14 } });
-        await next({ rotation:   7, config: { tension: 185, friction: 16 } });
-        await next({ rotation:  -3, config: { tension: 190, friction: 20 } });
-        await next({ rotation:   0, config: { tension: 200, friction: 24 } });
+        await next({ rotation: -4, config: { tension: 180, friction: 16 } });
+        await next({ rotation:  3, config: { tension: 185, friction: 18 } });
+        await next({ rotation: -1, config: { tension: 190, friction: 22 } });
+        await next({ rotation:  0, config: { tension: 200, friction: 26 } });
         hasSettledRef.current = true;
       },
     });
@@ -72,15 +76,24 @@ export default function Lanyard() {
     }
   });
 
-  // Scroll-triggered pendulum swing — only fires after initial sequence settles
+  // Scroll-triggered pendulum swing — direction matches scroll direction
   useEffect(() => {
     const handleScroll = () => {
       if (isDraggingRef.current || !hasSettledRef.current) return;
 
+      const currentY = window.scrollY;
+      // 1 = scrolling down → swing right (positive), -1 = up → swing left (negative)
+      const dir = currentY > lastScrollYRef.current ? 1 : -1;
+      lastScrollYRef.current = currentY;
+
       api.start({
         to: async (next) => {
-          await next({ rotation: -SCROLL_SWING_AMPLITUDE, config: { tension: 220, friction: 18 } });
-          await next({ rotation:  0,                      config: { tension: 220, friction: 22 } });
+          // First arc: swing in the scroll direction
+          await next({ rotation:  dir * SCROLL_SWING_AMPLITUDE,       config: { tension: 200, friction: 14 } });
+          // Return arc: small swing back the other way (decaying pendulum feel)
+          await next({ rotation: -dir * SCROLL_SWING_AMPLITUDE * 0.4, config: { tension: 200, friction: 18 } });
+          // Settle to centre
+          await next({ rotation:  0,                                   config: { tension: 220, friction: 24 } });
         },
       });
     };
@@ -220,12 +233,29 @@ export default function Lanyard() {
               flexDirection: 'column',
             }}
           >
-            {/* Photo */}
+            {/* Photo — click to cycle through profile photos */}
             <img
-              src={profile1}
-              alt=""
+              src={PHOTOS[photoIndex]}
+              alt="Click to see more photos"
               draggable={false}
               onDragStart={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPhotoIndex((i) => (i + 1) % PHOTOS.length);
+                onPhotoClick?.();
+                // Small bounce swing on click for tactile feedback
+                if (hasSettledRef.current && !isDraggingRef.current) {
+                  api.start({
+                    to: async (next) => {
+                      await next({ rotation:  3, config: { tension: 260, friction: 16 } });
+                      await next({ rotation: -2, config: { tension: 260, friction: 20 } });
+                      await next({ rotation:  0, config: { tension: 280, friction: 26 } });
+                    },
+                  });
+                }
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               style={{
                 width: '256px',
                 height: '240px',
@@ -234,7 +264,8 @@ export default function Lanyard() {
                 borderRadius: '12px',
                 display: 'block',
                 marginBottom: '12px',
-                pointerEvents: 'none',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s ease',
               }}
             />
 

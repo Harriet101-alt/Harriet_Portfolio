@@ -26,6 +26,7 @@ const FONT_MONO = '"Courier Prime", "Courier New", monospace';
 const FONT_DISPLAY = '"Playfair Display", Georgia, serif';
 
 const EASE_RESISTANCE = 'cubic-bezier(0.65, 0, 0.35, 1)';
+const FOREST_GREEN = '#2D6A4F';
 
 // ─── CONTENT ─────────────────────────────────────────────────────────────────
 
@@ -308,6 +309,82 @@ function ImpactLine({ text }: { text: string }) {
   );
 }
 
+function ClickHintSticker({ animate }: { animate: boolean }) {
+  const markerId = useId().replace(/:/g, 'x');
+  const text = 'Click to find out more';
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        top: '-54px',
+        right: '14px',
+        zIndex: 10,
+        pointerEvents: 'none',
+        width: '162px',
+      }}
+    >
+      <div
+        style={{
+          fontFamily: '"Caveat", cursive',
+          fontSize: '15px',
+          color: FOREST_GREEN,
+          lineHeight: 1.3,
+          transform: 'rotate(-4deg)',
+          transformOrigin: 'left bottom',
+        }}
+      >
+        {text.split('').map((char, i) => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-block',
+              opacity: 0,
+              animation: animate
+                ? `hintWriteChar 0.08s ease-out ${i * 38}ms both`
+                : 'none',
+            }}
+          >
+            {char === ' ' ? '\u00A0' : char}
+          </span>
+        ))}
+      </div>
+      <svg
+        width="62"
+        height="44"
+        viewBox="0 0 62 44"
+        style={{ display: 'block', marginLeft: '6px', marginTop: '2px' }}
+      >
+        <defs>
+          <marker
+            id={`ah-${markerId}`}
+            markerWidth="7"
+            markerHeight="7"
+            refX="5"
+            refY="3.5"
+            orient="auto"
+          >
+            <path d="M 0 0 L 7 3.5 L 0 7 Z" fill={FOREST_GREEN} />
+          </marker>
+        </defs>
+        <path
+          d="M 52,4 Q 14,10 5,40"
+          stroke={FOREST_GREEN}
+          strokeWidth="1.8"
+          fill="none"
+          strokeLinecap="round"
+          markerEnd={`url(#ah-${markerId})`}
+          strokeDasharray="85"
+          style={{
+            strokeDashoffset: animate ? '0' : '85',
+            transition: animate ? 'stroke-dashoffset 0.55s ease-out 120ms' : 'none',
+          }}
+        />
+      </svg>
+    </div>
+  );
+}
+
 function EduStamp({ color, stampText, centerText, rotation }: { color: string; stampText: string; centerText: string; rotation: number }) {
   const arcId = useId();
   return (
@@ -395,9 +472,25 @@ export default function ExperienceSection() {
   const { isDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
   const [activeTab, setActiveTab] = useState<TabId>('work');
-  const [openWork, setOpenWork] = useState<Set<number>>(new Set([0]));
-  const [openProjects, setOpenProjects] = useState<Set<number>>(new Set([0]));
+  const [openWork, setOpenWork] = useState<Set<number>>(new Set());
+  const [openProjects, setOpenProjects] = useState<Set<number>>(new Set());
+  const [openEducation, setOpenEducation] = useState<Set<number>>(new Set());
   const [storyMapOpen, setStoryMapOpen] = useState(false);
+  const [sectionVisible, setSectionVisible] = useState(false);
+  const [dismissedHints, setDismissedHints] = useState<Set<TabId>>(new Set());
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const dismissHint = (tab: TabId) =>
+    setDismissedHints(prev => new Set([...prev, tab]));
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setSectionVisible(true); },
+      { threshold: 0.15 }
+    );
+    if (sectionRef.current) obs.observe(sectionRef.current);
+    return () => obs.disconnect();
+  }, []);
 
   const toggle = (set: Set<number>, setter: (s: Set<number>) => void, i: number) => {
     const next = new Set(set);
@@ -413,6 +506,7 @@ export default function ExperienceSection() {
 
   return (
     <section
+      ref={sectionRef}
       id="experience"
       className="py-16 md:py-20 relative"
       style={{
@@ -422,6 +516,7 @@ export default function ExperienceSection() {
       }}
     >
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
         @keyframes punkStarBob {
           0%, 100% { transform: translateY(0) rotate(var(--star-rot, 0deg)); }
           50% { transform: translateY(-6px) rotate(var(--star-rot, 0deg)); }
@@ -432,6 +527,10 @@ export default function ExperienceSection() {
         }
         .punk-tab-content { animation: punkTabFade 320ms ${EASE_RESISTANCE}; }
         .punk-tab-btn { position: relative; background: none; border: none; cursor: pointer; }
+        @keyframes hintWriteChar {
+          from { opacity: 0; transform: translateY(3px) scale(0.7) rotate(-8deg); }
+          to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+        }
       `}</style>
 
       {/* Decorative star cluster around the header */}
@@ -461,7 +560,7 @@ export default function ExperienceSection() {
               fontFamily: FONT_DISPLAY,
               fontSize: 'clamp(2rem, 4vw, 2.75rem)',
               fontWeight: 600,
-              color: isDarkMode ? themeColors.colors.white : themeColors.colors.pink[500],
+              color: isDarkMode ? themeColors.colors.white : '#000000',
               margin: 0,
             }}
           >
@@ -513,19 +612,25 @@ export default function ExperienceSection() {
         {/* Tab content */}
         <div style={{ maxWidth: '780px', margin: '0 auto', position: 'relative' }} key={activeTab} className="punk-tab-content">
           {activeTab === 'work' && (
-            <div>
+            <div style={{ position: 'relative' }}>
+              {!dismissedHints.has('work') && (
+                <ClickHintSticker animate={sectionVisible} />
+              )}
               {WORK_ENTRIES.map((entry, i) => (
                 <ExpandableEntry
                   key={entry.title}
                   isOpen={openWork.has(i)}
-                  onToggle={() => toggle(openWork, setOpenWork, i)}
+                  onToggle={() => {
+                    if (i === 0) dismissHint('work');
+                    toggle(openWork, setOpenWork, i);
+                  }}
                   cardBg={cardBg}
                   borderColor={cardBorder}
                   hoverBg={cardHoverBg}
                   header={
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600], margin: 0 }}>
+                        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
                           {entry.title}
                         </h3>
                         <p style={{ fontSize: '0.9rem', color: themeColors.textSecondary, margin: '2px 0 8px' }}>{entry.org}</p>
@@ -555,6 +660,9 @@ export default function ExperienceSection() {
 
           {activeTab === 'projects' && (
             <div style={{ position: 'relative' }}>
+              {!dismissedHints.has('projects') && (
+                <ClickHintSticker animate={sectionVisible} />
+              )}
               <img
                 src={stickers[5]}
                 alt=""
@@ -570,14 +678,17 @@ export default function ExperienceSection() {
                     <ExpandableEntry
                       key={entry.title}
                       isOpen={false}
-                      onToggle={() => setStoryMapOpen(true)}
+                      onToggle={() => {
+                        dismissHint('projects');
+                        setStoryMapOpen(true);
+                      }}
                       cardBg={cardBg}
                       borderColor={cardBorder}
                       hoverBg={cardHoverBg}
                       header={
                         <div className="flex justify-between items-start gap-4">
                           <div>
-                            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600], margin: 0 }}>
+                            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
                               {entry.title}
                               <span
                                 title="Opens StoryMap"
@@ -619,7 +730,7 @@ export default function ExperienceSection() {
                   header={
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600], margin: 0 }}>
+                        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
                           {entry.title}
                         </h3>
                         <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: themeColors.textSecondary, margin: '2px 0 8px' }}>{entry.context}</p>
@@ -651,29 +762,42 @@ export default function ExperienceSection() {
           )}
 
           {activeTab === 'education' && (
-            <div>
+            <div style={{ position: 'relative' }}>
+              {!dismissedHints.has('education') && (
+                <ClickHintSticker animate={sectionVisible} />
+              )}
               {EDUCATION_ENTRIES.map((entry, i) => (
-                <div
+                <ExpandableEntry
                   key={entry.degree}
-                  className="flex flex-col sm:flex-row items-start gap-5"
-                  style={{
-                    background: cardBg,
-                    border: `1.5px solid ${cardBorder}`,
-                    borderRadius: '4px',
-                    padding: '20px',
-                    marginBottom: '14px',
+                  isOpen={openEducation.has(i)}
+                  onToggle={() => {
+                    if (i === 0) dismissHint('education');
+                    toggle(openEducation, setOpenEducation, i);
                   }}
-                >
-                  <EduStamp color={entry.stampColor} stampText={entry.stampText} centerText={entry.result} rotation={i % 2 === 0 ? -8 : 6} />
-                  <div>
-                    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600], margin: 0 }}>
-                      {entry.degree}
-                    </h3>
-                    <p style={{ fontSize: '0.9rem', color: themeColors.textSecondary, margin: '2px 0 4px' }}>{entry.institution}</p>
-                    <p style={{ fontFamily: FONT_MONO, fontSize: '11px', color: themeColors.textSecondary, letterSpacing: '0.04em', margin: '0 0 10px' }}>
-                      {entry.result} · {entry.date}
-                    </p>
-                    {entry.bullets && (
+                  cardBg={cardBg}
+                  borderColor={cardBorder}
+                  hoverBg={cardHoverBg}
+                  header={
+                    <div className="flex items-start gap-4">
+                      <EduStamp
+                        color={entry.stampColor}
+                        stampText={entry.stampText}
+                        centerText={entry.result}
+                        rotation={i % 2 === 0 ? -8 : 6}
+                      />
+                      <div>
+                        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
+                          {entry.degree}
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: themeColors.textSecondary, margin: '2px 0 4px' }}>{entry.institution}</p>
+                        <p style={{ fontFamily: FONT_MONO, fontSize: '11px', color: themeColors.textSecondary, letterSpacing: '0.04em', margin: 0 }}>
+                          {entry.result} · {entry.date}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                  body={
+                    entry.bullets && (
                       <ul style={{ margin: 0, padding: '0 0 0 16px', listStyle: 'disc' }}>
                         {entry.bullets.map((b, bi) => (
                           <li key={bi} style={{ fontSize: '0.85rem', lineHeight: 1.75, color: themeColors.textPrimary, marginBottom: bi < entry.bullets!.length - 1 ? '8px' : 0 }}>
@@ -681,9 +805,9 @@ export default function ExperienceSection() {
                           </li>
                         ))}
                       </ul>
-                    )}
-                  </div>
-                </div>
+                    )
+                  }
+                />
               ))}
             </div>
           )}

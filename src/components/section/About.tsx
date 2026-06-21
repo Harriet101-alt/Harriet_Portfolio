@@ -21,6 +21,7 @@ const About = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const collageRef = useRef<HTMLDivElement>(null);
   const [collageVisible, setCollageVisible] = useState(false);
+  const [clickHintDismissed, setClickHintDismissed] = useState(false);
   const { isDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
 
@@ -226,7 +227,17 @@ const About = () => {
     };
   };
 
+  const HINT_GREEN = '#2D6A4F';
+
   return (
+    <>
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
+      @keyframes clickHereChar {
+        from { opacity: 0; transform: translateY(3px) scale(0.7) rotate(-6deg); }
+        to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+      }
+    `}</style>
     <section id="about" ref={sectionRef} className="min-h-screen" style={{
       position: 'relative',
       background: themeColors.background.sections?.about || themeColors.background.gradient,
@@ -338,14 +349,13 @@ const About = () => {
               </div>
 
               <div className="hero-buttons flex justify-start gap-3 mt-4">
-                <button
+                <a
+                  href="/Harriet_Fletcher_CV.pdf"
+                  download="Harriet_Fletcher_CV.pdf"
                   className="hero-action-btn text-sm md:text-base px-4 py-2 md:px-5 md:py-2.5"
-                  onClick={() => {
-                    window.open('/Harriet_Fletcher_CV.pdf', '_blank');
-                  }}
                 >
                   CV →
-                </button>
+                </a>
                 <Link
                   to="/contact"
                   className="hero-action-btn text-sm md:text-base px-4 py-2 md:px-5 md:py-2.5"
@@ -411,8 +421,70 @@ const About = () => {
 
                 {/* Lanyard — z-index 20 (above mount z-14 and polaroids z-15) */}
                 <div style={{ position: 'relative', zIndex: 20 }}>
-                  <Lanyard />
+                  <Lanyard onPhotoClick={() => setClickHintDismissed(true)} />
                 </div>
+
+                {/* "Click here" hint — right edge of collage, upper photo area, arrow points left into photo */}
+                {collageVisible && !clickHintDismissed && (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      top: '210px',
+                      right: '-5px',
+                      zIndex: 25,
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: '2px',
+                    }}
+                  >
+                    {/* Arrow curves left toward the badge photo */}
+                    <svg width="78" height="52" viewBox="0 0 78 52"
+                      style={{ display: 'block', flexShrink: 0 }}
+                    >
+                      <defs>
+                        <filter id="pencil-ch" x="-20%" y="-20%" width="140%" height="140%">
+                          <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="3" seed="5" result="noise" />
+                          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+                        </filter>
+                        {/* Tip at x=7; with orient="auto" and leftward path end, tip points toward the badge */}
+                        <marker id="ch-arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                          <path d="M 0 0 L 7 3.5 L 0 7 Z" fill={HINT_GREEN} />
+                        </marker>
+                      </defs>
+                      {/* Starts at right (near text), curves gently up, ends at left pointing toward badge photo */}
+                      <path
+                        d="M 72,36 Q 42,4 10,22"
+                        stroke={HINT_GREEN} strokeWidth="1.9" fill="none"
+                        strokeLinecap="round" strokeOpacity="0.85"
+                        markerEnd="url(#ch-arrow)"
+                        filter="url(#pencil-ch)"
+                      />
+                    </svg>
+                    {/* "Click here" text — character by character */}
+                    <div style={{
+                      fontFamily: '"Caveat", cursive',
+                      fontSize: '18px',
+                      color: HINT_GREEN,
+                      lineHeight: 1.2,
+                      transform: 'rotate(-2deg)',
+                      transformOrigin: 'left center',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {'Click here'.split('').map((ch, i) => (
+                        <span key={i} style={{
+                          display: 'inline-block',
+                          opacity: 0,
+                          animation: `clickHereChar 0.08s ease-out ${i * 45}ms both`,
+                        }}>
+                          {ch === ' ' ? '\u00A0' : ch}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -424,9 +496,7 @@ const About = () => {
 
       {/* About Section with Stickers and Journal */}
       <div className="py-8 md:py-12" style={{
-        background: isDarkMode
-          ? 'transparent'
-          : `linear-gradient(180deg, transparent 0%, ${withAlpha(themeColors.colors.pink[50], 0.5)} 50%, ${themeColors.colors.pink[25]} 100%)`
+        background: 'transparent'
       }}>
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex items-center justify-center relative min-h-[400px] md:min-h-[600px]">
@@ -604,6 +674,7 @@ const About = () => {
         </div>
       )}
     </section>
+    </>
   );
 };
 

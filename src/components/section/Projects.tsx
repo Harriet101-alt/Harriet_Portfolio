@@ -21,6 +21,8 @@ const Projects = () => {
   // the special "drag me" star
   const [specialStar, setSpecialStar] = useState<{ x: number; y: number }>({ x: 85, y: 8 });
   const [isDraggingSpecial, setIsDraggingSpecial] = useState(false);
+  const [starOverButton, setStarOverButton] = useState<Element | null>(null);
+  const didMoveRef = useRef(false);
 
   // carousel state
   const [currentPage, setCurrentPage] = useState(0);
@@ -71,19 +73,27 @@ const Projects = () => {
   // Drag handlers for special star
   const handleSpecialStarMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
+    didMoveRef.current = false;
     setIsDraggingSpecial(true);
     isDraggingRef.current = true;
   };
 
   const handleSpecialStarTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
+    didMoveRef.current = false;
     setIsDraggingSpecial(true);
     isDraggingRef.current = true;
+  };
+
+  const handleSpecialStarClick = () => {
+    if (didMoveRef.current || !starOverButton) return;
+    (starOverButton as HTMLElement).click();
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDraggingSpecial && containerRef.current) {
+        didMoveRef.current = true;
         const rect = containerRef.current.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -98,6 +108,7 @@ const Projects = () => {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (isDraggingSpecial && containerRef.current && e.touches.length > 0) {
+        didMoveRef.current = true;
         const rect = containerRef.current.getBoundingClientRect();
         const touch = e.touches[0];
         const x = ((touch.clientX - rect.left) / rect.width) * 100;
@@ -228,7 +239,23 @@ const Projects = () => {
     };
   }, [draggedStar]);
 
-  // project data - these are the main cards
+  // Hit-detection: update which button the special star is hovering over
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const starCenterX = containerRect.left + (specialStar.x / 100) * containerRect.width + 22;
+    const starCenterY = containerRect.top + (specialStar.y / 100) * containerRect.height + 22;
+    const buttons = containerRef.current.querySelectorAll<HTMLElement>('.project-btn, .project-btn-outline');
+    let found: Element | null = null;
+    for (const btn of buttons) {
+      const r = btn.getBoundingClientRect();
+      if (starCenterX >= r.left && starCenterX <= r.right && starCenterY >= r.top && starCenterY <= r.bottom) {
+        found = btn;
+        break;
+      }
+    }
+    setStarOverButton(found);
+  }, [specialStar]);
   const projects = [
     {
       title: "Land Acquisition Application for Residential Development",
@@ -329,6 +356,7 @@ const Projects = () => {
         className="special-draggable-star"
         onMouseDown={handleSpecialStarMouseDown}
         onTouchStart={handleSpecialStarTouchStart}
+        onClick={handleSpecialStarClick}
         style={{
           position: 'absolute',
           left: `${specialStar.x}%`,
@@ -336,10 +364,15 @@ const Projects = () => {
           width: '44px',
           height: '44px',
           zIndex: 15,
-          cursor: isDraggingSpecial ? 'grabbing' : 'grab',
+          cursor: starOverButton ? 'pointer' : (isDraggingSpecial ? 'grabbing' : 'grab'),
           userSelect: 'none',
-          animation: 'twinkle 3s infinite'
+          animation: starOverButton ? undefined : 'twinkle 3s infinite',
+          transition: 'filter 0.2s ease',
+          filter: starOverButton
+            ? 'drop-shadow(0 0 6px #FF1F7D) drop-shadow(0 0 12px #FF69B4) brightness(1.25)'
+            : undefined,
         }}
+        title={starOverButton ? 'Click to open' : 'Drag me over a project button!'}
       >
         <img
           src={isDarkMode ? specialStars.dragMeStarDark : specialStars.dragMeStar}

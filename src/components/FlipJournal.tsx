@@ -1,5 +1,6 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { profile2, profile3, profilePlane } from '../assets';
+import journalBg from '../assets/journal.PNG';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -306,6 +307,36 @@ interface PageLayerProps {
   showCastShadow?: boolean;
 }
 
+// ── Spiral wire binding SVG ───────────────────────────────────────────────────
+function SpiralBinding({ bookHeight, topPad, botPad }: { bookHeight: number; topPad: number; botPad: number }) {
+  const coilCount = 16;
+  const usable = bookHeight - topPad - botPad;
+  const spacing = usable / (coilCount - 1);
+  const cx = 35;
+  const rx = 20;
+  const ry = 8;
+  return (
+    <svg
+      width="70" height={bookHeight}
+      aria-hidden="true"
+      style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', zIndex: 20, pointerEvents: 'none', overflow: 'visible' }}
+    >
+      {/* Terracotta spine rod */}
+      <rect x={cx - 3} y={topPad - 14} width="6" height={usable + 28} rx="3" fill="#b8845a" />
+      {/* Back halves — lighter, behind the rod */}
+      {Array.from({ length: coilCount }, (_, i) => {
+        const y = topPad + i * spacing;
+        return <path key={`b${i}`} d={`M ${cx - rx},${y} A ${rx},${ry} 0 0 0 ${cx + rx},${y}`} stroke="#aaa" strokeWidth="1.8" fill="none" strokeLinecap="round" />;
+      })}
+      {/* Front halves — darker, over the rod */}
+      {Array.from({ length: coilCount }, (_, i) => {
+        const y = topPad + i * spacing;
+        return <path key={`f${i}`} d={`M ${cx + rx},${y} A ${rx},${ry} 0 0 0 ${cx - rx},${y}`} stroke="#1c1c1c" strokeWidth="2.2" fill="none" strokeLinecap="round" />;
+      })}
+    </svg>
+  );
+}
+
 function PageLayer({ content, pageNumber, side, variant, direction, showCastShadow }: PageLayerProps) {
   const isLeft = side === 'left';
   const transformOrigin = direction === 'forward' ? 'left center' : direction === 'back' ? 'right center' : 'center';
@@ -366,14 +397,30 @@ export default function FlipJournal() {
   const [currentSpread, setCurrentSpread] = useState(0);
   const [flip, setFlip] = useState<FlipState | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [journalVisible, setJournalVisible] = useState(false);
+  const [dismissedForward, setDismissedForward] = useState(false);
+  const [dismissedBack, setDismissedBack] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const spreads = getSpreads();
   const total = spreads.length;
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setJournalVisible(true); },
+      { threshold: 0.15 }
+    );
+    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    return () => obs.disconnect();
+  }, []);
 
   function goTo(direction: Direction) {
     if (flip) return;
     if (direction === 'forward' && currentSpread >= total - 1) return;
     if (direction === 'back' && currentSpread <= 0) return;
+
+    if (direction === 'forward') setDismissedForward(true);
+    if (direction === 'back') setDismissedBack(true);
 
     const toSpread = direction === 'forward' ? currentSpread + 1 : currentSpread - 1;
     setFlip({ direction, fromSpread: currentSpread, toSpread });
@@ -392,7 +439,7 @@ export default function FlipJournal() {
   const isTurningLeft = flip?.direction === 'back';
 
   return (
-    <div style={styles.wrapper}>
+    <div ref={wrapperRef} style={styles.wrapper}>
       {/* SVG paper-grain filter definition — zero size, never visible */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
         <filter id="paper-grain">
@@ -402,6 +449,7 @@ export default function FlipJournal() {
       </svg>
       {/* Journal book — bookFrame is a plain 2D stacking box so the corner
           touch zones below sit reliably above book's 3D perspective context */}
+      <div style={{ position: 'relative', display: 'inline-block' }}>
       <div style={styles.bookFrame}>
       <div style={styles.book}>
 
@@ -433,12 +481,11 @@ export default function FlipJournal() {
           />
         )}
 
-        {/* Spine */}
-        <div style={styles.spine}>
-          {Array.from({ length: 13 }).map((_, i) => (
-            <div key={i} style={styles.ring} />
-          ))}
-        </div>
+        {/* Spiral binding — absolutely positioned SVG overlay */}
+        <SpiralBinding bookHeight={736} topPad={56} botPad={56} />
+
+        {/* Spine spacer — keeps flex layout gap between pages */}
+        <div style={styles.spine} />
 
         {/* Right page */}
         {isTurningRight && flip && outgoingSpread && incomingSpread ? (
@@ -524,6 +571,91 @@ export default function FlipJournal() {
           clipPath: 'polygon(100% 100%, 100% 0, 0 100%)',
         }}
       />
+
+      </div>{/* end bookFrame */}
+
+      {/* Forward "Turn Me" hint — below-right of book, arrow points up into right corner */}
+      {journalVisible && !dismissedForward && currentSpread < total - 1 && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 10px)',
+            right: '10px',
+            zIndex: 10,
+            pointerEvents: 'none',
+            width: '110px',
+            textAlign: 'right',
+          }}
+        >
+          <svg width="54" height="44" viewBox="0 0 54 44" style={{ display: 'block', marginLeft: 'auto', marginRight: '4px', marginBottom: '2px' }}>
+            <defs>
+              <filter id="pencil-fwd" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="turbulence" baseFrequency="0.065" numOctaves="3" seed="2" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+              <marker id="tm-fwd" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                <path d="M 0 0 L 7 3.5 L 0 7 Z" fill={TURN_ME_GREEN} />
+              </marker>
+            </defs>
+            {/* Arrow curves up-right toward the bottom-right page corner */}
+            <path d="M 44,40 Q 50,20 44,4" stroke={TURN_ME_GREEN} strokeWidth="1.8" fill="none"
+              strokeLinecap="round" strokeOpacity="0.82" markerEnd="url(#tm-fwd)"
+              filter="url(#pencil-fwd)"
+              style={{ strokeDasharray: 80, strokeDashoffset: 0 }}
+            />
+          </svg>
+          <div style={{ fontFamily: '"Caveat", cursive', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(3deg)', transformOrigin: 'right top' }}>
+            {'Turn Me'.split('').map((ch, i) => (
+              <span key={i} style={{ display: 'inline-block', opacity: 0, animation: `journalWriteChar 0.08s ease-out ${i * 45}ms both` }}>
+                {ch === ' ' ? '\u00A0' : ch}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Backward "Go backwards" hint — below-left of book, arrow points up into left corner */}
+      {journalVisible && !dismissedBack && currentSpread > 0 && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 10px)',
+            left: '10px',
+            zIndex: 10,
+            pointerEvents: 'none',
+            width: '140px',
+          }}
+        >
+          <svg width="54" height="44" viewBox="0 0 54 44" style={{ display: 'block', marginRight: 'auto', marginLeft: '4px', marginBottom: '2px' }}>
+            <defs>
+              {/* Pencil/sketch displacement filter */}
+              <filter id="pencil-bck" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="turbulence" baseFrequency="0.065" numOctaves="3" seed="7" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+              {/* Arrowhead — tip at right (x=7), so with orient="auto" upward path the tip points UP toward page */}
+              <marker id="tm-bck" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                <path d="M 0 0 L 7 3.5 L 0 7 Z" fill={TURN_ME_GREEN} />
+              </marker>
+            </defs>
+            {/* Path from bottom to top — markerEnd tip points toward page */}
+            <path d="M 10,40 Q 4,20 10,4" stroke={TURN_ME_GREEN} strokeWidth="1.8" fill="none"
+              strokeLinecap="round" strokeOpacity="0.82" markerEnd="url(#tm-bck)"
+              filter="url(#pencil-bck)"
+              style={{ strokeDasharray: 80, strokeDashoffset: 0 }}
+            />
+          </svg>
+          <div style={{ fontFamily: '"Caveat", cursive', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(-3deg)', transformOrigin: 'left top' }}>
+            {'Go backwards'.split('').map((ch, i) => (
+              <span key={i} style={{ display: 'inline-block', opacity: 0, animation: `journalWriteChar 0.08s ease-out ${i * 45}ms both` }}>
+                {ch === ' ' ? '\u00A0' : ch}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Navigation */}
@@ -569,6 +701,11 @@ export default function FlipJournal() {
 
       {/* Keyframes injected via style tag */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
+        @keyframes journalWriteChar {
+          from { opacity: 0; transform: translateY(3px) scale(0.7) rotate(-6deg); }
+          to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+        }
         @keyframes pageTurnForward {
           0%   { transform: rotateY(0deg);    box-shadow: none; }
           8%   { box-shadow: -4px 0 8px rgba(0,0,0,0.1); }
@@ -678,22 +815,13 @@ const COVER_BORDER_END = '#b8845a';
 const EXPEDITION_RED = '#8b2e1a';
 const STAMP_GREEN = '#3a5c3a';
 const MAP_BLUE = '#2d5986';
+const TURN_ME_GREEN = '#2D6A4F';
 
 const FONT_DISPLAY = '"Playfair Display", Georgia, serif';
 const FONT_BODY = '"Lora", Georgia, serif';
 const FONT_MONO = '"Courier Prime", "Courier New", monospace';
 
 const MOBILE_SCALE = typeof window !== 'undefined' && window.innerWidth < 768 ? 0.72 : 1;
-const PAPER_GRAIN =
-  'radial-gradient(ellipse 140% 100% at 25% 15%, rgba(255,252,240,0.4) 0%, transparent 45%), ' +
-  'radial-gradient(ellipse 120% 100% at 80% 90%, rgba(0,0,0,0.03) 0%, transparent 50%), ' +
-  'radial-gradient(ellipse at 20% 30%, rgba(0,0,0,0.015) 0%, transparent 50%), ' +
-  'radial-gradient(ellipse at 80% 70%, rgba(0,0,0,0.012) 0%, transparent 45%), ' +
-  'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.01) 0%, transparent 60%), ' +
-  'repeating-linear-gradient(23deg, rgba(0,0,0,0.008) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.006) 3px), ' +
-  'repeating-linear-gradient(-67deg, rgba(0,0,0,0.006) 0px, transparent 1px, transparent 3px), ' +
-  '#f0eee9';
-const PAPER_TEXTURE_BG = PAPER_GRAIN;
 
 const styles: Record<string, React.CSSProperties> = {
 
@@ -719,14 +847,13 @@ const styles: Record<string, React.CSSProperties> = {
     width: '960px',
     maxWidth: '960px',
     minWidth: '720px',
-    height: '540px',
-    minHeight: '420px',
-    aspectRatio: '16 / 9',
-    background: `repeating-linear-gradient(91deg, rgba(0,0,0,0.04) 0px, transparent 1px, transparent 3px), linear-gradient(to bottom, #c4956a, #b8845a)`,
-    borderStyle: 'solid',
-    borderColor: COVER_BORDER_END,
-    borderWidth: '18px 20px 22px 19px',
-    borderRadius: '6px',
+    height: '736px',
+    minHeight: '565px',
+    backgroundImage: `url(${journalBg})`,
+    backgroundSize: '100% 100%',
+    backgroundRepeat: 'no-repeat',
+    padding: '56px 50px 56px 50px',
+    boxSizing: 'border-box',
     perspective: '1800px',
     transformStyle: 'preserve-3d',
     transform: `scale(${MOBILE_SCALE})`,
@@ -771,8 +898,8 @@ const styles: Record<string, React.CSSProperties> = {
     inset: 0,
     backfaceVisibility: 'hidden',
     zIndex: 3,
-    background: PAPER_TEXTURE_BG,
-    boxShadow: 'inset -24px 0 32px -20px rgba(60,40,20,0.35), 0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
+    background: 'rgba(252,251,249,0.55)',
+    boxShadow: 'inset -18px 0 24px -18px rgba(60,40,20,0.18), 0 0 0 1px rgba(0,0,0,0.03)',
     padding: '2rem 1.7rem',
     overflow: 'hidden',
   },
@@ -782,8 +909,8 @@ const styles: Record<string, React.CSSProperties> = {
     inset: 0,
     backfaceVisibility: 'hidden',
     zIndex: 3,
-    background: PAPER_TEXTURE_BG,
-    boxShadow: 'inset 24px 0 32px -20px rgba(60,40,20,0.35), 0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
+    background: 'rgba(252,251,249,0.55)',
+    boxShadow: 'inset 18px 0 24px -18px rgba(60,40,20,0.18), 0 0 0 1px rgba(0,0,0,0.03)',
     padding: '2rem 1.7rem',
     overflow: 'hidden',
   },
@@ -806,16 +933,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   spine: {
-    width: '32px',
-    background:
-      'linear-gradient(90deg, transparent calc(50% - 5px), #9e5a3a calc(50% - 5px), #8b4e32 calc(50% + 5px), transparent calc(50% + 5px))',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
-    padding: '10px 0',
-    zIndex: 6,
+    width: '56px',
     flexShrink: 0,
+    background: 'transparent',
+    zIndex: 6,
   },
 
   ring: {

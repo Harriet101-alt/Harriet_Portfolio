@@ -47,24 +47,27 @@ const Contact = () => {
         <section className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto" aria-label="Contact methods">
           
           {/* Email Card */}
-          <article className="rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300" style={{ backgroundColor: themeColors.card.background }} aria-labelledby="email-heading">
+          <a
+            href={`mailto:${socialLinks.email}`}
+            aria-label={`Send email to ${socialLinks.email}`}
+            className="rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300 block no-underline"
+            style={{ backgroundColor: themeColors.card.background }}
+          >
             <div className="flex justify-center mb-4">
               <Mail className="h-12 w-12" style={{ color: themeColors.colors.pink[500] }} aria-hidden="true" />
             </div>
-            <h3 id="email-heading" className="text-xl font-semibold mb-2" style={{ color: themeColors.text.primary }}>Email</h3>
-            <a 
-              href={`mailto:${socialLinks.email}`}
-              aria-label={`Send email to ${socialLinks.email}`}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors hover:opacity-80"
+            <h3 className="text-xl font-semibold mb-2" style={{ color: themeColors.text.primary }}>Email</h3>
+            <span
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium"
               style={{
                 backgroundColor: themeColors.interactive.primary,
                 color: themeColors.text.pink
               }}
             >
               Send Email
-            </a>
+            </span>
             <p className="text-xs mt-3" style={{ color: themeColors.text.tertiary }}>{socialLinks.display.email}</p>
-          </article>
+          </a>
 
           {/* GitHub Card */}
           <article className="rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300" style={{ backgroundColor: themeColors.card.background }} aria-labelledby="github-heading">
@@ -89,26 +92,29 @@ const Contact = () => {
           </article>
 
           {/* LinkedIn Card */}
-          <article className="rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300" style={{ backgroundColor: themeColors.card.background }} aria-labelledby="linkedin-heading">
+          <a
+            href={socialLinks.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Connect on LinkedIn (opens in new tab)`}
+            className="rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300 block no-underline"
+            style={{ backgroundColor: themeColors.card.background }}
+          >
             <div className="flex justify-center mb-4">
               <Linkedin className="h-12 w-12" style={{ color: themeColors.colors.pink[500] }} aria-hidden="true" />
             </div>
-            <h3 id="linkedin-heading" className="text-xl font-semibold mb-2" style={{ color: themeColors.text.primary }}>LinkedIn</h3>
-            <a 
-              href={socialLinks.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Connect on LinkedIn at ${socialLinks.display.linkedin} (opens in new tab)`}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors hover:opacity-80"
+            <h3 className="text-xl font-semibold mb-2" style={{ color: themeColors.text.primary }}>LinkedIn</h3>
+            <span
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium"
               style={{
                 backgroundColor: themeColors.interactive.primary,
                 color: themeColors.text.pink
               }}
             >
               Connect
-            </a>
+            </span>
             <p className="text-xs mt-3" style={{ color: themeColors.text.tertiary }}>{socialLinks.display.linkedin}</p>
-          </article>
+          </a>
 
         </section>
       </div>
