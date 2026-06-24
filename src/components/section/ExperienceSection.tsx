@@ -106,6 +106,18 @@ const PROJECT_ENTRIES: ProjectEntry[] = [
     ],
   },
   {
+    title: 'Carbon Biomass Estimation',
+    context: 'MSc Thesis · University of Liverpool · 2025–2026',
+    badge: 'ML',
+    stack: ['Python', 'XGBoost', 'Random Forest', 'SVR', 'Streamlit', 'SoilGrids', 'GLDAS'],
+    summary: 'Stacked ensemble model predicting above-ground carbon biomass across Rimba Raya, Indonesia, with an interactive Streamlit dashboard for non-technical stakeholders.',
+    bullets: [
+      'Built a heterogeneous stacked ensemble model (Random Forest, SVR, and XGBoost with a Ridge meta-learner) trained on above-ground carbon biomass reference values from the ESSD Global Carbon Biomass dataset, predicting biomass distribution across Rimba Raya, Indonesia — applying 5-fold nested cross-validation to reduce overfitting by ~6% and produce a fully reproducible Python pipeline.',
+      'Used seven environmental co-variates as predictive features — soil granularity fractions (clay, silt, sand at 0–5cm depth) from SoilGrids ISRIC, peatland fraction from the ML Global Peatland Extent Dataset, elevation from SRTM 90m, root zone soil moisture from NASA GLDAS CLSM, and daily precipitation from CHIRPS — demonstrating that freely available remote sensing and geospatial datasets can drive accurate large-scale carbon stock estimation without field sampling.',
+      'Engineered a Streamlit application to give non-technical stakeholders an interactive dashboard exposing the model\'s internal logic — visualising feature importance, prediction confidence, and how individual environmental co-variates drive biomass estimates — directly addressing the black-box problem inherent in ensemble ML by making model behaviour interpretable and auditable without requiring statistical expertise.',
+    ],
+  },
+  {
     title: 'Regulatory Compliance Checker',
     context: 'Pfizer Pharma Hackathon · March 2026',
     badge: 'HACKATHON WIN',

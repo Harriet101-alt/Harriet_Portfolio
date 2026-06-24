@@ -308,6 +308,13 @@ const Projects = () => {
       githubUrl: safeLink(socialLinks.repositories.projectThree),
       hideCode: true,
     },
+    {
+      title: "Carbon Biomass Estimation",
+      description: "Stacked ensemble model predicting above-ground carbon biomass across Rimba Raya, Indonesia, with an interactive Streamlit dashboard for non-technical stakeholders.",
+      technologies: ["Python", "XGBoost", "Random Forest", "SVR", "Streamlit", "SoilGrids", "GLDAS"],
+      detailsUrl: "https://stackedensembleagc-ducxnnekw8q6pf7bm3spof.streamlit.app",
+      githubUrl: "https://github.com/Harriet101-alt/Carbon-BiomassML",
+    },
   ];
 
   // Calculate carousel pagination
@@ -466,7 +473,7 @@ const Projects = () => {
       <TooltipProvider delayDuration={200}>
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-center gap-1 mb-4">
-            <h2 className="text-4xl font-bold" style={{ color: isDarkMode ? themeColors.colors.white : themeColors.colors.pink[500] }}>Projects</h2>
+            <h2 className="text-4xl font-bold" style={{ color: isDarkMode ? '#ffffff' : '#1a0a0f' }}>Projects</h2>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
@@ -514,6 +521,16 @@ const Projects = () => {
                       <CardDescription className="text-gray-600 mt-2">
                         {project.description}
                       </CardDescription>
+                      {'bullets' in project && project.bullets && (
+                        <ul className="mt-3 space-y-2">
+                          {(project.bullets as string[]).map((bullet, bi) => (
+                            <li key={bi} className="flex items-start gap-2 text-xs" style={{ color: themeColors.text.secondary }}>
+                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: themeColors.primary }} />
+                              <span className="leading-relaxed">{bullet}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -629,8 +646,8 @@ const Projects = () => {
               disabled={currentPage === 0}
               className="transition-all duration-200 hover:scale-110"
               style={{
-                color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[400],
-                opacity: currentPage === 0 ? 0.2 : 0.6,
+                color: '#1a0a0f',
+                opacity: currentPage === 0 ? 0.3 : 1,
                 cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
                 background: 'none',
                 border: 'none',
@@ -663,8 +680,8 @@ const Projects = () => {
                     height: '8px',
                     borderRadius: '4px',
                     backgroundColor: currentPage === i
-                      ? (isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[400])
-                      : (isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[400]),
+                      ? '#1a0a0f'
+                      : '#1a0a0f',
                     opacity: currentPage === i ? 1 : 0.3,
                     cursor: 'pointer',
                     border: 'none',
@@ -680,8 +697,8 @@ const Projects = () => {
               disabled={currentPage === totalPages - 1}
               className="transition-all duration-200 hover:scale-110"
               style={{
-                color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[400],
-                opacity: currentPage === totalPages - 1 ? 0.2 : 0.6,
+                color: '#1a0a0f',
+                opacity: currentPage === totalPages - 1 ? 0.3 : 1,
                 cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer',
                 background: 'none',
                 border: 'none',

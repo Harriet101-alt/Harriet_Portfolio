@@ -21,11 +21,31 @@ const SECTION_HEIGHT_MOBILE = 260;
 const MIN_GAP_DESKTOP = 160;
 const MIN_GAP_MOBILE = 124;
 const MOBILE_BREAKPOINT = 760;
-const INSET = 44;
+const INSET = 80;
 
 const ROUTE_DURATION = 900;
 const ROUTE_STAGGER = 200;
 const PIN_STAGGER = 180;
+
+// Pin geometry — the pin is a lollipop: circular head, needle stem, then label.
+// The pin is anchored by its HEAD CENTRE, so the circle sits directly on the
+// trail (the bezier path runs through `positions`) and the needle crosses below.
+const PIN_HEAD_HEIGHT = 26;       // matches pin-head div height
+const PIN_NEEDLE_HEIGHT = 16;     // matches pin needle div height
+const PIN_HEAD_CENTER_OFFSET = PIN_HEAD_HEIGHT / 2; // 13 — container top = anchorY - half the head
+
+// Explorer character geometry (matches the ExplorerCharacter svg below)
+const EXPLORER_SVG_HEIGHT = 52;
+const EXPLORER_FOOT_Y = 46;       // shoe baseline within the 0 0 44 52 viewBox
+// translate(-50%, -50%) centers the sprite on `top`, so its feet sit this far
+// below `top`; subtracting it lands the feet exactly on the trail (the anchor).
+const EXPLORER_FOOT_FROM_CENTER = EXPLORER_FOOT_Y - EXPLORER_SVG_HEIGHT / 2; // 20
+
+// Per-waypoint horizontal nudges (pixels, index matches WAYPOINTS order) — used
+// only to spread overlapping markers; both the pins and the trail share them so
+// they never drift apart.
+// [Liverpool, Lancaster, Kuala Lumpur, Seville, University of Liverpool]
+const PIN_X_OFFSETS = [0, 0, 0, -60, -160];
 
 function getRouteStart(i: number) {
   return i * ROUTE_STAGGER;
@@ -60,10 +80,53 @@ function computeLayout(
   return { positions, trackWidth };
 }
 
-function routePathD(from: PinPosition, to: PinPosition) {
-  const midX = (from.x + to.x) / 2;
-  const midY = (from.y + to.y) / 2 - 25;
-  return `M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`;
+// ─── CUBIC BEZIER PATH HELPERS ───────────────────────────────────────────────
+
+interface BezierSegment {
+  p0: PinPosition; p1: PinPosition; p2: PinPosition; p3: PinPosition;
+}
+
+function buildBezierSegments(positions: PinPosition[]): BezierSegment[] {
+  return positions.slice(0, -1).map((p0, i) => {
+    const p3 = positions[i + 1];
+    const dx = p3.x - p0.x;
+    return {
+      p0,
+      p1: { x: p0.x + dx * 0.30, y: p0.y },
+      p2: { x: p3.x - dx * 0.30, y: p3.y },
+      p3,
+    };
+  });
+}
+
+// Evaluate a point on a cubic Bezier segment at parameter t ∈ [0, 1].
+function getCubicPoint(seg: BezierSegment, t: number): PinPosition {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x: mt3 * seg.p0.x + 3 * mt2 * t * seg.p1.x + 3 * mt * t2 * seg.p2.x + t3 * seg.p3.x,
+    y: mt3 * seg.p0.y + 3 * mt2 * t * seg.p1.y + 3 * mt * t2 * seg.p2.y + t3 * seg.p3.y,
+  };
+}
+
+// Position along the whole route. `progress` is a float where the integer part
+// selects a segment and the fraction is its local t (0 = first pin, N = last pin).
+function getExplorerPosition(progress: number, segs: BezierSegment[]): PinPosition {
+  if (!segs.length) return { x: 0, y: 0 };
+  if (progress <= 0) return segs[0].p0;
+  if (progress >= segs.length) return segs[segs.length - 1].p3;
+  const idx = Math.floor(Math.min(progress, segs.length - 1));
+  return getCubicPoint(segs[idx], progress - idx);
+}
+
+// Serialize a bezier segment to an SVG path string. Pins, trail, and explorer
+// all consume the same segments, so the dashed line passes exactly through each
+// pin's anchor and the explorer walks the line it draws.
+function bezierSegmentPath(seg: BezierSegment): string {
+  return `M ${seg.p0.x} ${seg.p0.y} C ${seg.p1.x} ${seg.p1.y}, ${seg.p2.x} ${seg.p2.y}, ${seg.p3.x} ${seg.p3.y}`;
 }
 
 function formatCoordinate(lat: number, lng: number) {
@@ -141,7 +204,10 @@ function RoutePath({ d, color, drawn, delay }: { d: string; color: string; drawn
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    if (ref.current) setLength(ref.current.getTotalLength());
+    if (ref.current) {
+      setLength(ref.current.getTotalLength());
+      setRevealed(false); // reset so draw animation replays when path shape changes
+    }
   }, [d]);
 
   useEffect(() => {
@@ -159,8 +225,8 @@ function RoutePath({ d, color, drawn, delay }: { d: string; color: string; drawn
       strokeDasharray={revealed ? '6 4' : length || 1}
       strokeDashoffset={drawn ? 0 : length}
       style={{ transition: `stroke-dashoffset ${ROUTE_DURATION}ms ease-in-out ${delay}ms` }}
-      onTransitionEnd={() => {
-        if (drawn) setRevealed(true);
+      onTransitionEnd={(e) => {
+        if (drawn && e.propertyName === 'stroke-dashoffset') setRevealed(true);
       }}
     />
   );
@@ -190,7 +256,7 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
       style={{
         position: 'absolute',
         left: x,
-        top: y - 13,
+        top: y - PIN_HEAD_CENTER_OFFSET,
         transform: 'translateX(-50%)',
         display: 'flex',
         flexDirection: 'column',
@@ -239,7 +305,7 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
           <WaypointGlyph icon={waypoint.icon} color={PAPER} />
         </div>
       </div>
-      <div style={{ width: 2, height: 16, background: waypoint.color }} />
+      <div style={{ width: 2, height: PIN_NEEDLE_HEIGHT, background: waypoint.color }} />
       <div style={{ marginTop: 4, textAlign: 'center', maxWidth: 104 }}>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 600, color: isDarkMode ? 'rgba(255,255,255,0.9)' : INK, lineHeight: 1.25 }}>
           {waypoint.label}
@@ -329,41 +395,48 @@ function FloatingInfoCard({ state, onClose }: { state: ActiveCardState; onClose:
 
 // ─── EXPLORER CHARACTER ──────────────────────────────────────────────────────
 
-function ExplorerCharacter() {
+interface ExplorerCharacterProps {
+  leftLegRotation: number;
+  rightLegRotation: number;
+  isMoving: boolean;
+}
+
+function ExplorerCharacter({ leftLegRotation, rightLegRotation, isMoving }: ExplorerCharacterProps) {
   return (
-    <g style={{ filter: 'drop-shadow(1px 2px 3px rgba(0,0,0,0.3))' }}>
-      {/* Body */}
-      <ellipse cx="16" cy="28" rx="8" ry="10" fill="#E8C49A"/>
-      {/* Head */}
-      <circle cx="16" cy="14" r="9" fill="#F5D5A8"/>
-      {/* Hat (pith helmet) */}
-      <ellipse cx="16" cy="8" rx="11" ry="4" fill="#C8A84B"/>
-      <rect x="8" y="5" width="16" height="5" rx="2" fill="#D4B254"/>
-      {/* Hat band */}
-      <rect x="8" y="8" width="16" height="2" fill="#A0832A" opacity="0.5"/>
-      {/* Eyes */}
-      <circle cx="12" cy="14" r="1.5" fill="#3D2008"/>
-      <circle cx="20" cy="14" r="1.5" fill="#3D2008"/>
-      {/* Eye shine */}
-      <circle cx="12.7" cy="13.3" r="0.5" fill="white"/>
-      <circle cx="20.7" cy="13.3" r="0.5" fill="white"/>
-      {/* Smile */}
-      <path d="M 13 17 Q 16 19 19 17" stroke="#A0622A" strokeWidth="1" fill="none" strokeLinecap="round"/>
+    <svg width="44" height="52" viewBox="0 0 44 52" fill="none"
+         style={{ filter: 'drop-shadow(1px 2px 3px rgba(0,0,0,0.3))' }}>
+      {/* Idle bounce indicator */}
+      {!isMoving && (
+        <path d="M17,1 L21,-3 L25,1 Z" fill="#A52A2A" className="explorer-idle-arrow" />
+      )}
       {/* Backpack */}
-      <rect x="22" y="20" width="7" height="10" rx="2" fill="#8B6914"/>
-      <rect x="23" y="22" width="5" height="3" rx="1" fill="#6B4F10" opacity="0.6"/>
-      {/* Shirt */}
-      <rect x="9" y="20" width="14" height="12" rx="3" fill="#8B9E6A"/>
-      {/* Legs */}
-      <line x1="12" y1="38" x2="10" y2="50" stroke="#5C3317" strokeWidth="3" strokeLinecap="round" className="explorer-leg-left"/>
-      <line x1="20" y1="38" x2="22" y2="50" stroke="#5C3317" strokeWidth="3" strokeLinecap="round" className="explorer-leg-right"/>
-      {/* Shoes */}
-      <ellipse cx="10" cy="50" rx="3" ry="2" fill="#3D2008" className="explorer-leg-left"/>
-      <ellipse cx="22" cy="50" rx="3" ry="2" fill="#3D2008" className="explorer-leg-right"/>
-      {/* Arms */}
-      <line x1="8" y1="24" x2="2" y2="32" stroke="#E8C49A" strokeWidth="2.5" strokeLinecap="round" className="explorer-arm-left"/>
-      <line x1="24" y1="24" x2="30" y2="32" stroke="#E8C49A" strokeWidth="2.5" strokeLinecap="round" className="explorer-arm-right"/>
-    </g>
+      <rect x="5" y="20" width="10" height="15" rx="2" fill="#506141" stroke="#333f26" strokeWidth="1.5"/>
+      <rect x="6" y="24" width="8" height="4" fill="#a3b899"/>
+      {/* Left leg */}
+      <g style={{ transform: `rotate(${leftLegRotation}deg)`, transformOrigin: '16px 34px' }}>
+        <line x1="16" y1="34" x2="16" y2="43" stroke="#5c4033" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M14,43 L20,43 L20,46 L13,46 Z" fill="#4a2c11"/>
+      </g>
+      {/* Right leg */}
+      <g style={{ transform: `rotate(${rightLegRotation}deg)`, transformOrigin: '26px 34px' }}>
+        <line x1="26" y1="34" x2="26" y2="43" stroke="#5c4033" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M24,43 L30,43 L30,46 L23,46 Z" fill="#4a2c11"/>
+      </g>
+      {/* Body */}
+      <rect x="12" y="21" width="18" height="15" rx="4" fill="#d4c5a1" stroke="#8c7755" strokeWidth="1.5"/>
+      <circle cx="16" cy="26" r="1.5" fill="#a17d45"/>
+      <circle cx="26" cy="26" r="1.5" fill="#a17d45"/>
+      {/* Head */}
+      <rect x="18" y="18" width="6" height="4" fill="#fbd1a2"/>
+      <circle cx="21" cy="15" r="7" fill="#fbd1a2" stroke="#d5a069" strokeWidth="1"/>
+      <circle cx="18.5" cy="14" r="1" fill="#333"/>
+      <circle cx="23.5" cy="14" r="1" fill="#333"/>
+      <path d="M19,17 Q21,19 23,17" stroke="#333" strokeWidth="1" strokeLinecap="round" fill="none"/>
+      {/* Hat */}
+      <path d="M11,12 C11,7 31,7 31,12 Z" fill="#e8dac0" stroke="#b09c7a" strokeWidth="1"/>
+      <rect x="12.5" y="10.5" width="17" height="1.5" fill="#A52A2A"/>
+      <path d="M7,13 Q21,10 35,13 Q37,15 35,15 Q21,12 7,15 Q5,15 7,13 Z" fill="#dfcaad" stroke="#9e8a64" strokeWidth="1"/>
+    </svg>
   );
 }
 
@@ -379,10 +452,15 @@ export default function ExpeditionMap() {
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [started, setStarted] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [activeCard, setActiveCard] = useState<ActiveCardState | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [walkAnimationTime, setWalkAnimationTime] = useState(0);
+  const targetProgressRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const isFlippedRef = useRef(false);
 
   const { isDarkMode } = useDarkMode();
 
@@ -396,9 +474,23 @@ export default function ExpeditionMap() {
   const minGap = isMobile ? MIN_GAP_MOBILE : MIN_GAP_DESKTOP;
   const sectionHeight = isMobile ? SECTION_HEIGHT_MOBILE : SECTION_HEIGHT_DESKTOP;
 
-  const { positions, trackWidth } = useMemo(
+  const { positions: rawPositions, trackWidth } = useMemo(
     () => computeLayout(viewportWidth, WAYPOINTS.length, minGap, sectionHeight),
     [viewportWidth, minGap, sectionHeight],
+  );
+  // Single source of truth for both pin markers and trail endpoints — the only
+  // per-waypoint adjustment is the shared horizontal nudge, so the trail always
+  // passes through the pins regardless of viewport width.
+  const positions = useMemo(
+    () => rawPositions.map((p, i) => ({
+      x: p.x + (PIN_X_OFFSETS[i] ?? 0),
+      y: p.y,
+    })),
+    [rawPositions],
+  );
+  const bezierSegments = useMemo(
+    () => buildBezierSegments(positions),
+    [positions],
   );
   const needsScroll = trackWidth > viewportWidth;
 
@@ -433,17 +525,15 @@ export default function ExpeditionMap() {
       hideTimerRef.current = null;
     }
 
-    const turningOn = activeIndex !== index;
-    if (turningOn) {
-      setActiveIndex(index);
-      setPulseKey((k) => k + 1);
+    setActiveIndex(index);
 
+    const cardAlreadyShowing = activeIndex === index && activeCard !== null;
+    if (!cardAlreadyShowing) {
+      setPulseKey((k) => k + 1);
       const pinEl = pinRefs.current[index];
       if (pinEl) {
-        const rect = pinEl.getBoundingClientRect();
-        setActiveCard({ waypoint: WAYPOINTS[index], pinRect: rect, isMobile });
+        setActiveCard({ waypoint: WAYPOINTS[index], pinRect: pinEl.getBoundingClientRect(), isMobile });
       }
-
       const wp = WAYPOINTS[index];
       window.dispatchEvent(
         new CustomEvent('expedition:zoomToWaypoint', {
@@ -451,14 +541,40 @@ export default function ExpeditionMap() {
         }),
       );
     } else {
-      setActiveIndex(null);
       hideTimerRef.current = window.setTimeout(() => setActiveCard(null), 250);
     }
-  }, [activeIndex, isMobile]);
+  }, [activeIndex, activeCard, isMobile]);
 
   useEffect(() => () => {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
   }, []);
+
+  // Explorer rAF animation — moves currentProgress toward activeIndex
+  useEffect(() => {
+    targetProgressRef.current = activeIndex;
+
+    const animate = () => {
+      setCurrentProgress((prev) => {
+        const target = targetProgressRef.current;
+        const diff = target - prev;
+        if (Math.abs(diff) < 0.02) return target;
+        setWalkAnimationTime((t) => t + 0.12);
+        return prev + (diff > 0 ? 0.018 : -0.018);
+      });
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [activeIndex]);
+
+  // Flip direction
+  useEffect(() => {
+    const diff = activeIndex - currentProgress;
+    if (Math.abs(diff) > 0.05) isFlippedRef.current = diff < 0;
+  }, [activeIndex, currentProgress]);
 
   const sectionStyle: React.CSSProperties = {
     position: 'relative',
@@ -470,41 +586,34 @@ export default function ExpeditionMap() {
     overflow: 'visible',
     fontFamily: FONT_BODY,
     transition: 'background 0.4s ease',
+    zIndex: 10, // above About section decorative overlays (tropics z:5, greenRocks z:6)
+    isolation: 'isolate',
   };
+
+  const isMoving = Math.abs(currentProgress - activeIndex) > 0.01;
+  const leftLegRotation  = isMoving ? Math.sin(walkAnimationTime * 1.8) * 18 : 0;
+  const rightLegRotation = isMoving ? Math.cos(walkAnimationTime * 1.8) * 18 : 0;
+  const bobbingOffset    = isMoving ? Math.abs(Math.sin(walkAnimationTime * 2.0)) * 4 : 0;
+  const explorerCoords   = getExplorerPosition(currentProgress, bezierSegments);
 
   return (
     <section ref={sectionRef} style={sectionStyle} aria-label="Expedition route">
       <style>{`
         @keyframes pinDrop {
-          0%   { transform: translateY(-24px) scale(0.8); opacity: 0; }
-          60%  { transform: translateY(3px) scale(1.05); opacity: 1; }
-          80%  { transform: translateY(-2px) scale(0.98); }
-          100% { transform: translateY(0) scale(1); }
+          0%   { transform: translateX(-50%) translateY(-24px) scale(0.8); opacity: 0; }
+          60%  { transform: translateX(-50%) translateY(3px) scale(1.05); opacity: 1; }
+          80%  { transform: translateX(-50%) translateY(-2px) scale(0.98); }
+          100% { transform: translateX(-50%) translateY(0) scale(1); }
         }
         @keyframes pinPulse {
           0%   { transform: scale(1); opacity: 0.55; }
           100% { transform: scale(2.3); opacity: 0; }
         }
-        @keyframes explorerLegLeft {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
+        @keyframes explorerIdleBounce {
+          0%, 100% { transform: translateY(0); }
+          50%       { transform: translateY(-4px); }
         }
-        @keyframes explorerLegRight {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-        }
-        @keyframes explorerArmLeft {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-        }
-        @keyframes explorerArmRight {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-        }
-        .explorer-leg-left  { animation: explorerLegLeft  0.4s ease-in-out infinite; }
-        .explorer-leg-right { animation: explorerLegRight 0.4s ease-in-out infinite; }
-        .explorer-arm-left  { animation: explorerArmLeft  0.4s ease-in-out infinite; }
-        .explorer-arm-right { animation: explorerArmRight 0.4s ease-in-out infinite; }
+        .explorer-idle-arrow { animation: explorerIdleBounce 0.9s ease-in-out infinite; }
         .expedition-pin:hover .pin-head { transform: scale(1.08); }
         .expedition-track::-webkit-scrollbar { display: none; }
       `}</style>
@@ -546,52 +655,43 @@ export default function ExpeditionMap() {
           scrollbarWidth: 'none',
         }}
       >
-        <div style={{ position: 'relative', width: trackWidth, height: '100%', margin: needsScroll ? undefined : '0 auto' }}>
+        <div style={{ position: 'relative', width: trackWidth, height: sectionHeight, margin: needsScroll ? undefined : '0 auto' }}>
           <svg
             width={trackWidth}
             height={sectionHeight}
-            style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+          style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
           >
             {WAYPOINTS.slice(1).map((wp, idx) => (
               <RoutePath
                 key={wp.id}
-                d={routePathD(positions[idx], positions[idx + 1])}
-                color={wp.color}
+                d={bezierSegmentPath(bezierSegments[idx])}
+                color={activeIndex >= idx + 1 ? wp.color : PENCIL}
                 drawn={started}
                 delay={getRouteStart(idx)}
               />
             ))}
-
-            {/* Hidden combined route for explorer animation */}
-            {positions.length >= 2 && (
-              <path
-                id="expedition-full-route"
-                d={positions.map((p, i) =>
-                  i === 0
-                    ? `M ${p.x} ${p.y}`
-                    : `Q ${(positions[i - 1].x + p.x) / 2} ${Math.min(positions[i - 1].y, p.y) - 25} ${p.x} ${p.y}`
-                ).join(' ')}
-                fill="none"
-                stroke="none"
-              />
-            )}
-
-            {/* Explorer character */}
-            {positions.length >= 2 && started && (
-              <g>
-                <animateMotion
-                  dur="12s"
-                  repeatCount="indefinite"
-                  rotate="0"
-                >
-                  <mpath href="#expedition-full-route" />
-                </animateMotion>
-                <g transform="translate(-16, -48)">
-                  <ExplorerCharacter />
-                </g>
-              </g>
-            )}
           </svg>
+
+          {/* Explorer character — follows cubic Bezier path via rAF */}
+          {started && (
+            <div
+              style={{
+                position: 'absolute',
+                left: explorerCoords.x - 4,
+                top: explorerCoords.y - EXPLORER_FOOT_FROM_CENTER - bobbingOffset,
+                transform: `translate(-50%, -50%)${isFlippedRef.current ? ' scaleX(-1)' : ''}`,
+                pointerEvents: 'none',
+                zIndex: 4,
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              <ExplorerCharacter
+                leftLegRotation={leftLegRotation}
+                rightLegRotation={rightLegRotation}
+                isMoving={isMoving}
+              />
+            </div>
+          )}
 
           {WAYPOINTS.map((wp, i) => (
             <Pin
@@ -611,7 +711,7 @@ export default function ExpeditionMap() {
       </div>
 
       {activeCard && (
-        <FloatingInfoCard state={activeCard} onClose={() => { setActiveIndex(null); setActiveCard(null); }} />
+        <FloatingInfoCard state={activeCard} onClose={() => { setActiveCard(null); }} />
       )}
 
       {needsScroll && (
@@ -649,7 +749,7 @@ export default function ExpeditionMap() {
           zIndex: 50,
         }}
       >
-        Currently: living in Liverpool
+        Currently: {WAYPOINTS[activeIndex]?.sublabel ?? WAYPOINTS[0].sublabel}
       </div>
     </section>
   );

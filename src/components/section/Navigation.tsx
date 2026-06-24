@@ -115,8 +115,8 @@ const Navigation = () => {
             textShadow: '0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.18)'
           }}
           onClick={() => window.location.href = '/'}
-          aria-label="My Portfolio - Go to homepage">
-          My Portfolio
+          aria-label="About Me - Go to homepage">
+          About Me
         </button>
         
         {/* Desktop Navigation */}

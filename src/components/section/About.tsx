@@ -8,7 +8,7 @@ import HeroGlobe from '../HeroGlobe';
 import Lanyard from '../ui/lanyard';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useThemeColors, withAlpha } from '../../hooks/useThemeColors';
-import { profile1, profile2, profile3, stickers as stickerImages, whiteLily, liRedLily, greenRocks, lakeMountain, tropics } from '../../assets';
+import { profile1, profile2, profile3, stickers as stickerImages, whiteLily, liRedLily, darkRedLily, greenRocks, lakeMountain, tropics } from '../../assets';
 
 
 const About = () => {
@@ -21,7 +21,6 @@ const About = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const collageRef = useRef<HTMLDivElement>(null);
   const [collageVisible, setCollageVisible] = useState(false);
-  const [clickHintDismissed, setClickHintDismissed] = useState(false);
   const { isDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
 
@@ -47,17 +46,6 @@ const About = () => {
     { src: profile2, caption: "photo 2" },
     { src: profile3, caption: "photo 3" }
   ];
-
-  const fullAsciiArt = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⢠⡾⠲⠶⣤⣀⣠⣤⣤⣤⡿⠛⠿⡴⠾⠛⢻⡆⠀⠀⠀
-⠀⠀⠀⣼⠁⠀⠀⠀⠉⠁⠀⢀⣿⠐⡿⣿⠿⣶⣤⣤⣷⡀⠀⠀
-⠀⠀⠀⢹⡶⠀⠀⠀⠀⠀⠀⠈⢯⣡⣿⣿⣀⣰⣿⣦⢂⡏⠀⠀
-⠀⠀⢀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠹⣍⣭⣾⠁⠀⠀
-⠀⣀⣸⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣸⣧⣤⡀
-⠈⠉⠹⣏⡁⠀⢸⣿⠀⠀⠀⢀⡀⠀⠀⠀⣿⠆⠀⢀⣸⣇⣀⠀
-⠀⠐⠋⢻⣅⡄⢀⣀⣀⡀⠀⠯⠽⠂⢀⣀⣀⡀⠀⣤⣿⠀⠉⠀
-⠀⠀⠴⠛⠙⣳⠋⠉⠉⠙⣆⠀⠀⢰⡟⠉⠈⠙⢷⠟⠈⠙⠂⠀
-⠀⠀⠀⠀⠀⢻⣄⣠⣤⣴⠟⠛⠛⠛⢧⣤⣤⣀⡾⠀⠀⠀⠀⠀`;
 
   // Typewriter effect for ASCII art
   useEffect(() => {
@@ -227,17 +215,7 @@ const About = () => {
     };
   };
 
-  const HINT_GREEN = '#2D6A4F';
-
   return (
-    <>
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
-      @keyframes clickHereChar {
-        from { opacity: 0; transform: translateY(3px) scale(0.7) rotate(-6deg); }
-        to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
-      }
-    `}</style>
     <section id="about" ref={sectionRef} className="min-h-screen" style={{
       position: 'relative',
       background: themeColors.background.sections?.about || themeColors.background.gradient,
@@ -248,15 +226,7 @@ const About = () => {
     }}>
 
       {/* ── Corner decorations (desktop only) ─────────────────────────── */}
-      {/* Tropics — top-left corner */}
-      <div className="hidden md:block" style={{
-        position: 'absolute', top: '0%', left: '0%', zIndex: 5,
-        transform: 'rotate(-5deg)',
-        transformOrigin: 'top left',
-      }}>
-        <img src={tropics} alt="" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-      </div>
-      {/* Tropics — top-right corner (mirrored) */}
+      {/* Tropics — top-right corner only */}
       <div className="hidden md:block" style={{
         position: 'absolute', top: '0%', right: '0%', zIndex: 5,
         transform: 'scaleX(-1) rotate(-5deg)',
@@ -264,36 +234,12 @@ const About = () => {
       }}>
         <img src={tropics} alt="" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
       </div>
-      {/* Rocks — top-left corner (above tropics) */}
-      <div className="hidden md:block" style={{
-        position: 'absolute', top: '2%', left: '1%', zIndex: 6,
-        transform: 'rotate(-3deg)',
-      }}>
-        <img src={greenRocks} alt="" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-      </div>
-      {/* Rocks — top-right corner (mirrored) */}
+      {/* Rocks — top-right corner only */}
       <div className="hidden md:block" style={{
         position: 'absolute', top: '3%', right: '2%', zIndex: 6,
         transform: 'scaleX(-1) rotate(-3deg)',
       }}>
         <img src={greenRocks} alt="" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-      </div>
-
-      {/* Globe sticker — scattered left side, matches sibling sticker family */}
-      <div className="hidden md:block" style={{
-        position: 'absolute',
-        top: '16%',
-        left: 'calc(1% - 19px)',
-        width: '150px',
-        height: '150px',
-        borderRadius: '50%',
-        border: '4px solid white',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.18)',
-        overflow: 'hidden',
-        transform: 'rotate(6deg)',
-        zIndex: 7,
-      }}>
-        <HeroGlobe compact />
       </div>
 
       {/* Hero Section */}
@@ -332,11 +278,11 @@ const About = () => {
                 marginBottom: '4px',
               }}>
                 {[
-                  "I am a Junior Developer from Liverpool, graduating with an MSc in Data Science and Artificial Intelligence in July. I studied Ecology and Conservation BSc(Hons) which taught me to read complex ecosystems before I ever reading a line of code. This instinct shapes how I approach every problem I encounter today.",
+                  "I am a Junior Developer from Liverpool, graduating with an MSc in Data Science and Artificial Intelligence in July. I studied Ecology and Conservation BSc(Hons) which taught me to read complex ecosystems before ever reading code. This instinct shapes how I approach the problems I encounter.",
                   "I apply AI to automate repetitive processes, freeing up space for the project elements requiring a human mind. I'm drawn to the craft of building thoughtful, usable interfaces and to the quieter work of supporting geographical research using computational methodology.",
-                  "More recently, I've been utilising GIS, where my environmental background and engineering skills intersect advancing projects.",
-                  "I am motivated by novel challenges and a belief that education is a life long endevor.",
-                  "Whether it be academia or industry – I don't know exactly which path I'll end up on — but I'm comfortable letting curiosity lead the way for now.",
+                  "More recently, I've been utilising GIS, where my environmental background and engineering skills intersect.",
+                  "I am motivated by novel challenges and believe that education is a life long endevor.",
+                  "Whether it be working inacademia or industry; I'm comfortable letting curiosity lead the way.",
                 ].map((text, i, arr) => (
                   <p key={i} style={{
                     fontSize: '0.9rem',
@@ -349,13 +295,14 @@ const About = () => {
               </div>
 
               <div className="hero-buttons flex justify-start gap-3 mt-4">
-                <a
-                  href="/Harriet_Fletcher_CV.pdf"
-                  download="Harriet_Fletcher_CV.pdf"
+                <button
                   className="hero-action-btn text-sm md:text-base px-4 py-2 md:px-5 md:py-2.5"
+                  onClick={() => {
+                    window.open('/Harriet_Fletcher_CV.pdf', '_blank');
+                  }}
                 >
                   CV →
-                </a>
+                </button>
                 <Link
                   to="/contact"
                   className="hero-action-btn text-sm md:text-base px-4 py-2 md:px-5 md:py-2.5"
@@ -372,7 +319,90 @@ const About = () => {
                 ref={collageRef}
                 style={{ position: 'relative', width: '380px', minHeight: '480px', flexShrink: 0 }}
               >
-                {/* Mount (lakeMountain) — centred below tropics & rocks, ~1cm gap */}
+                {/* ── Collage below Lanyard ──────────────────────────────────────
+                    Row 1 — bridges the gap between Lanyard bottom and lily row
+                    Row 2 — white lily (left) · red lily (right)          [existing]
+                    Row 3 — stickers filling gap above mountain
+                    Row 4 — mountain at bottom centre                     [existing]
+                ──────────────────────────────────────────────────────────────── */}
+
+                {/* Row 1 — left: tropics (moved up 100px), right: dark-red lily (behind red lily, moved up 200px) */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% - 120px)',
+                  left: '3%',
+                  transform: 'rotate(-9deg)',
+                  zIndex: 13,
+                }}>
+                  <img src={tropics} alt="" style={{ width: '120px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% - 210px)',
+                  right: '3%',
+                  transform: 'rotate(8deg)',
+                  zIndex: 12,
+                }}>
+                  <img src={darkRedLily} alt="" style={{ width: '105px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+
+                {/* Row 2 — white lily (left) · red lily (right) */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 30px)',
+                  left: '-5%',
+                  transform: 'rotate(-8deg)',
+                  zIndex: 14,
+                }}>
+                  <img src={whiteLily} alt="White lily" style={{ width: '120px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 20px)',
+                  right: '-8%',
+                  transform: 'rotate(6deg)',
+                  zIndex: 14,
+                }}>
+                  <img src={liRedLily} alt="Red lily" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+
+                {/* Row 3 — stickers filling gap between lilies and mountain */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 2px)',
+                  left: '-14px',
+                  transform: 'rotate(-4deg)',
+                  zIndex: 13,
+                }}>
+                  <img src={stickerImages[2]} alt="" style={{ width: '88px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+                {/* stickerImages[5] — diagonal midpoint between tropics (bottom-left) and darkRedLily (top-right)
+                    tropics centre ≈ x:71px, y:100%-60px
+                    darkRedLily centre ≈ x:316px, y:100%-157px
+                    midpoint → x:194px (left:40%), y:100%-109px — no x-overlap with either image */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% - 109px)',
+                  left: '40%',
+                  transform: 'rotate(12deg)',
+                  zIndex: 13,
+                }}>
+                  <img src={stickerImages[5]} alt="" style={{ width: '82px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+
+                {/* sticker_1 — below sticker_6 (bottom ≈ 100%-27px), above mountain (top ≈ 100%+90px)
+                    left: 38% keeps it clear of white lily (left:-5%) and red lily (right:-8%) */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 0px)',
+                  left: '38%',
+                  transform: 'rotate(-8deg)',
+                  zIndex: 13,
+                }}>
+                  <img src={stickerImages[0]} alt="" style={{ width: '82px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                </div>
+
+                {/* Row 4 — mountain at bottom centre of the triangle */}
                 <div style={{
                   position: 'absolute',
                   top: 'calc(100% + 90px)',
@@ -383,108 +413,27 @@ const About = () => {
                   <img src={lakeMountain} alt="Mountain lake" style={{ width: '155px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
                 </div>
 
-                {/* Sticker 1 — top-left of Lanyard (white lily) */}
-                <div className={collageVisible ? 'collage-photo-1' : ''} style={{
+                {/* Globe — positioned between paragraph (left) and Lanyard (right) */}
+                <div style={{
                   position: 'absolute',
-                  top: '-8%', left: 'calc(-12% + 19px)',
-                  zIndex: 15,
+                  left: '-80px',
+                  top: '35%',
+                  width: '150px',
+                  height: '150px',
+                  borderRadius: '50%',
+                  border: '4px solid white',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.18)',
+                  overflow: 'hidden',
+                  transform: 'rotate(6deg)',
+                  zIndex: 18,
                 }}>
-                  <img src={whiteLily} alt="White lily" style={{ width: '120px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
+                  <HeroGlobe compact />
                 </div>
 
-                {/* Sticker 2 — top-right of Lanyard (light red lily) */}
-                <div className={collageVisible ? 'collage-photo-2' : ''} style={{
-                  position: 'absolute',
-                  top: '-5%', right: '-10%',
-                  zIndex: 15,
-                }}>
-                  <img src={liRedLily} alt="Red lily" style={{ width: '110px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-                </div>
-
-                {/* Sticker 3 — bottom-left of Lanyard (tropics) */}
-                <div className={collageVisible ? 'collage-photo-3' : ''} style={{
-                  position: 'absolute',
-                  bottom: '-6%', left: '-14%',
-                  zIndex: 15,
-                }}>
-                  <img src={tropics} alt="Tropics" style={{ width: '130px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-                </div>
-
-                {/* Sticker 4 — bottom-right of Lanyard (green rocks) */}
-                <div className={collageVisible ? 'collage-photo-4' : ''} style={{
-                  position: 'absolute',
-                  bottom: '-10%', right: '-8%',
-                  zIndex: 15,
-                }}>
-                  <img src={greenRocks} alt="Green rocks" style={{ width: '130px', height: 'auto', display: 'block', borderRadius: '6px', filter: 'drop-shadow(0 0 3px white) drop-shadow(0 0 3px white) drop-shadow(0 0 6px white)' }} loading="lazy" />
-                </div>
-
-                {/* Lanyard — z-index 20 (above mount z-14 and polaroids z-15) */}
+                {/* Lanyard — z-index 20 (above mount z-14 and globe z-18) */}
                 <div style={{ position: 'relative', zIndex: 20 }}>
-                  <Lanyard onPhotoClick={() => setClickHintDismissed(true)} />
+                  <Lanyard />
                 </div>
-
-                {/* "Click here" hint — right edge of collage, upper photo area, arrow points left into photo */}
-                {collageVisible && !clickHintDismissed && (
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      position: 'absolute',
-                      top: '210px',
-                      right: '-5px',
-                      zIndex: 25,
-                      pointerEvents: 'none',
-                      display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: '2px',
-                    }}
-                  >
-                    {/* Arrow curves left toward the badge photo */}
-                    <svg width="78" height="52" viewBox="0 0 78 52"
-                      style={{ display: 'block', flexShrink: 0 }}
-                    >
-                      <defs>
-                        <filter id="pencil-ch" x="-20%" y="-20%" width="140%" height="140%">
-                          <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="3" seed="5" result="noise" />
-                          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
-                        </filter>
-                        {/* Tip at x=7; with orient="auto" and leftward path end, tip points toward the badge */}
-                        <marker id="ch-arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                          <path d="M 0 0 L 7 3.5 L 0 7 Z" fill={HINT_GREEN} />
-                        </marker>
-                      </defs>
-                      {/* Starts at right (near text), curves gently up, ends at left pointing toward badge photo */}
-                      <path
-                        d="M 72,36 Q 42,4 10,22"
-                        stroke={HINT_GREEN} strokeWidth="1.9" fill="none"
-                        strokeLinecap="round" strokeOpacity="0.85"
-                        markerEnd="url(#ch-arrow)"
-                        filter="url(#pencil-ch)"
-                      />
-                    </svg>
-                    {/* "Click here" text — character by character */}
-                    <div style={{
-                      fontFamily: '"Caveat", cursive',
-                      fontSize: '18px',
-                      color: HINT_GREEN,
-                      lineHeight: 1.2,
-                      transform: 'rotate(-2deg)',
-                      transformOrigin: 'left center',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {'Click here'.split('').map((ch, i) => (
-                        <span key={i} style={{
-                          display: 'inline-block',
-                          opacity: 0,
-                          animation: `clickHereChar 0.08s ease-out ${i * 45}ms both`,
-                        }}>
-                          {ch === ' ' ? '\u00A0' : ch}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -674,7 +623,6 @@ const About = () => {
         </div>
       )}
     </section>
-    </>
   );
 };
 
