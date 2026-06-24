@@ -1,4 +1,4 @@
-import { useDarkMode } from '../contexts/DarkModeContext';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { FileText, ArrowUp } from 'lucide-react';
 import { socialLinks } from '../config/socialLinks';
@@ -40,10 +40,8 @@ const Footer = () => {
                 backgroundColor: isDarkMode ? themeColors.colors.dark[800] : themeColors.colors.white,
                 color: themeColors.colors.pink[500],
                 border: `2px solid ${themeColors.colors.pink[300]}`,
-                outline: 'none !important',
                 WebkitTapHighlightColor: 'transparent'
               }}
-              onFocus={(e) => e.currentTarget.blur()}
               aria-label="Back to top"
             >
               <ArrowUp size={20} />

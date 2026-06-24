@@ -1,21 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { ExternalLink, Code, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
-import { socialLinks } from '../../config/socialLinks';
 import { lightStars, darkStars, specialStars } from '../../assets/stars';
 import { comingSoon } from '../../assets';
 import StoryMapModal from '../ui/StoryMapModal';
+import { portfolioProjects, type PortfolioProject } from '../../data/projects';
 
 const Projects = () => {
   const { isDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
 
   // track all the random background stars
-  const [stars, setStars] = useState<Array<{ id: number; x: number; y: number; image: string; isDragging: boolean }>>([]);
+  const [stars, setStars] = useState<Array<{ id: number; x: number; y: number; imageIndex: number; isDragging: boolean }>>([]);
   const [draggedStar, setDraggedStar] = useState<number | null>(null);
 
   // the special "drag me" star
@@ -28,14 +28,12 @@ const Projects = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const projectsPerPage = 4;
-  const [storyMapOpen, setStoryMapOpen] = useState(false);
+  const [selectedStoryMap, setSelectedStoryMap] = useState<PortfolioProject | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
-  const safeLink = (url?: string) => url || socialLinks.github || '#';
-
   useEffect(() => {
-    // spawn stars when component mounts or dark mode changes
+    // Spawn positions once so the interactive field does not jump when the theme changes.
     const generatedStars = Array.from({ length: 30 }, (_, i) => {
       let x, y;
 
@@ -63,12 +61,12 @@ const Projects = () => {
         id: i,
         x: x,
         y: y,
-        image: (isDarkMode ? darkStars : lightStars)[Math.floor(Math.random() * (isDarkMode ? darkStars : lightStars).length)],
+        imageIndex: Math.floor(Math.random() * Math.min(lightStars.length, darkStars.length)),
         isDragging: false
       };
     });
     setStars(generatedStars);
-  }, [isDarkMode]);
+  }, []);
 
   // Drag handlers for special star
   const handleSpecialStarMouseDown = (e: React.MouseEvent) => {
@@ -88,6 +86,12 @@ const Projects = () => {
   const handleSpecialStarClick = () => {
     if (didMoveRef.current || !starOverButton) return;
     (starOverButton as HTMLElement).click();
+  };
+
+  const handleSpecialStarKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleSpecialStarClick();
   };
 
   useEffect(() => {
@@ -256,66 +260,7 @@ const Projects = () => {
     }
     setStarOverButton(found);
   }, [specialStar]);
-  const projects = [
-    {
-      title: "Land Acquisition Application for Residential Development",
-      description: "Developed a multi-criteria site scoring application in ArcGIS integrating government open data (Housing Delivery Test scores, Land Registry house prices, Environment Agency ecological constraints, OS amenity layers) to rank candidate sites by planning permission viability.",
-      technologies: ["ArcGIS", "Open Data", "Planning"],
-      detailsUrl: "https://storymaps.arcgis.com/stories/f59512cff20a4ebeb8b14570cfbae7fa",
-      githubUrl: "https://github.com/Harriet101-alt/Land_Appraisal",
-      isStoryMap: true,
-    },
-    {
-      title: "Regulatory Compliance Checker",
-      description: "Architected a Next.js pipeline that cross-references promotional drug content against regulatory guidelines at build time, surfacing non-compliant copy as flagged warnings and eliminating a class of pre-launch manual review for regulated digital assets.",
-      technologies: ["Next.js", "TypeScript", "Regulatory Review"],
-      detailsUrl: "https://github.com/binarybelt/cxiai-group12",
-      githubUrl: "https://github.com/binarybelt/cxiai-group12"
-    },
-    {
-      title: "Parts of Speech Tagging (POS)",
-      description: "Engineered an end-to-end clinical NLP pipeline (BiLSTM & Transformer, PyTorch) with torchtext tokenisation and Optuna Bayesian hyperparameter optimisation.",
-      technologies: ["PyTorch", "Transformer", "BiLSTM", "Optuna"],
-      detailsUrl: "https://github.com/atanilson/Applied_AI_Assignments/blob/main/COMP634_assignment3_Test.ipynb",
-      githubUrl: "https://github.com/atanilson/Applied_AI_Assignments/blob/main/COMP634_assignment3_Test.ipynb"
-    },
-    {
-      title: "Geospatial Socioeconomic Analysis",
-      description: "Applied LISA spatial autocorrelation and DBSCAN clustering to Census API geodata to identify income-inequality hotspots across Austin, TX.",
-      technologies: ["QGIS", "DBSCAN", "GeoPandas", "Census API"],
-      detailsUrl: "https://github.com/Harriet101-alt/Texas_Maps",
-      githubUrl: "https://github.com/Harriet101-alt/Texas_Maps"
-    },
-    {
-      title: "Obesity Classifier for Health Risk Prediction",
-      description: "Trained a Random Forest classifier on 2,111 clinical records achieving 0.96 F1 / 0.999 AUC; stratified K-Fold CV and correlation-matrix pre-processing addressed class imbalance and multicollinearity.",
-      technologies: ["Python", "Random Forest", "Sci-kit Learn"],
-      detailsUrl: "https://github.com/atanilson/Applied_AI_Assignments/tree/main/assignment1",
-      githubUrl: "https://github.com/atanilson/Applied_AI_Assignments/tree/main/assignment1"
-    },
-    {
-      title: "Mapped Population Change Across Africa",
-      description: "Reprojected raster data to equal-area CRS, applied accessible diverging colour schemes, and implemented tooltip interactivity for spatial exploration of population density change throughout Africa (2015-2025).",
-      technologies: ["Raster", "QGIS", "Visualization"],
-      detailsUrl: "https://github.com/Harriet101-alt/Africa-Population-Change15-25",
-      githubUrl: "https://github.com/Harriet101-alt/Africa-Population-Change15-25"
-    },
-    {
-      title: "Distributed Task-Scheduling Architecture",
-      description: "A 500-task, 5-server automation environment was suffering race conditions and uneven load distribution. Formalised the problem as a CSP and architected a DAG traversal engine with dependency-aware batching heuristics.",
-      technologies: ["Python", "CSP", "DAG"],
-      detailsUrl: safeLink(socialLinks.repositories.projectThree),
-      githubUrl: safeLink(socialLinks.repositories.projectThree),
-      hideCode: true,
-    },
-    {
-      title: "Carbon Biomass Estimation",
-      description: "Stacked ensemble model predicting above-ground carbon biomass across Rimba Raya, Indonesia, with an interactive Streamlit dashboard for non-technical stakeholders.",
-      technologies: ["Python", "XGBoost", "Random Forest", "SVR", "Streamlit", "SoilGrids", "GLDAS"],
-      detailsUrl: "https://stackedensembleagc-ducxnnekw8q6pf7bm3spof.streamlit.app",
-      githubUrl: "https://github.com/Harriet101-alt/Carbon-BiomassML",
-    },
-  ];
+  const projects = portfolioProjects;
 
   // Calculate carousel pagination
   const totalPages = Math.ceil(projects.length / projectsPerPage);
@@ -362,9 +307,14 @@ const Projects = () => {
       {/* Special Drag Me Star - Interactive with Click Me arrow */}
       <div
         className="special-draggable-star"
+        role="button"
+        tabIndex={0}
         onMouseDown={handleSpecialStarMouseDown}
         onTouchStart={handleSpecialStarTouchStart}
+        onKeyDown={handleSpecialStarKeyDown}
         onClick={handleSpecialStarClick}
+        aria-describedby="drag-star-instructions"
+        aria-label={starOverButton ? 'Open highlighted project action' : 'Drag star over a project action, then press Enter to open it'}
         style={{
           position: 'absolute',
           left: `${specialStar.x}%`,
@@ -377,7 +327,7 @@ const Projects = () => {
           animation: starOverButton ? undefined : 'twinkle 3s infinite',
           transition: 'filter 0.2s ease',
           filter: starOverButton
-            ? 'drop-shadow(0 0 6px #FF1F7D) drop-shadow(0 0 12px #FF69B4) brightness(1.25)'
+            ? `drop-shadow(0 0 6px ${themeColors.colors.special.dragMe}) drop-shadow(0 0 12px ${themeColors.colors.pink[300]}) brightness(1.25)`
             : undefined,
         }}
         title={starOverButton ? 'Click to open' : 'Drag me over a project button!'}
@@ -425,7 +375,7 @@ const Projects = () => {
           style={{
             fontFamily: "'DK Crayonista', cursive",
             fontSize: '26px',
-            color: isDarkMode ? '#FDD5DF' : '#ec4899',
+            color: isDarkMode ? themeColors.colors.pink[200] : themeColors.colors.special.dragMe,
             fontWeight: 'bold',
             userSelect: 'none',
             textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
@@ -434,12 +384,16 @@ const Projects = () => {
           drag me!
         </span>
       </div>
+      <p id="drag-star-instructions" className="sr-only">
+        Drag the star over a project button to highlight it. Press Enter or Space when a button is highlighted to open that project action.
+      </p>
 
       {/* all the regular draggable stars scattered around */}
       {stars.map((star) => (
         <div
           key={star.id}
           className="draggable-star"
+          aria-hidden="true"
           onMouseDown={handleStarMouseDown(star.id)}
           onTouchStart={handleStarTouchStart(star.id)}
           style={{
@@ -454,7 +408,7 @@ const Projects = () => {
           }}
         >
           <img
-            src={star.image}
+            src={(isDarkMode ? darkStars : lightStars)[star.imageIndex]}
             alt="Star"
             style={{
               width: '100%',
@@ -473,13 +427,14 @@ const Projects = () => {
       <TooltipProvider delayDuration={200}>
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-center gap-1 mb-4">
-            <h2 className="text-4xl font-bold" style={{ color: isDarkMode ? '#ffffff' : '#1a0a0f' }}>Projects</h2>
+            <h2 className="text-4xl font-bold" style={{ color: themeColors.text.primary }}>Projects</h2>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="inline-flex items-center justify-center bg-transparent border-none outline-none focus:outline-none" 
+                  className="inline-flex items-center justify-center bg-transparent border-none" 
                   style={{ minWidth: '44px', minHeight: '44px' }}
                   aria-label="Information about project icons"
+                  type="button"
                 >
                   <Heart
                     className="h-5 w-5 cursor-pointer transition-colors"
@@ -495,7 +450,7 @@ const Projects = () => {
               </TooltipContent>
             </Tooltip>
           </div>
-          <p className="text-center mb-12 text-lg text-gray-600">
+          <p className="text-center mb-12 text-lg" style={{ color: themeColors.text.secondary }}>
             Here are some of the projects I've worked on recently
           </p>
 
@@ -508,7 +463,7 @@ const Projects = () => {
             }}
           >
             {currentProjects.map((project, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative" style={{
+              <Card key={index} className="project-card group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative" style={{
                 backgroundColor: themeColors.card.background,
                 border: `1px solid ${themeColors.card.border}`
               }} aria-label={`${project.title} project`}>
@@ -518,19 +473,9 @@ const Projects = () => {
                       <CardTitle className="text-xl transition-colors group-hover:!text-pink-500 dark:group-hover:!text-pink-400">
                         {project.title}
                       </CardTitle>
-                      <CardDescription className="text-gray-600 mt-2">
-                        {project.description}
+                      <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
+                        {project.technicalDescription}
                       </CardDescription>
-                      {'bullets' in project && project.bullets && (
-                        <ul className="mt-3 space-y-2">
-                          {(project.bullets as string[]).map((bullet, bi) => (
-                            <li key={bi} className="flex items-start gap-2 text-xs" style={{ color: themeColors.text.secondary }}>
-                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: themeColors.primary }} />
-                              <span className="leading-relaxed">{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -552,9 +497,10 @@ const Projects = () => {
                     {'isStoryMap' in project && project.isStoryMap ? (
                      <>
                        <button
-                         onClick={() => setStoryMapOpen(true)}
+                         onClick={() => setSelectedStoryMap(project)}
                          className="project-btn flex items-center gap-1"
                          aria-label={`View ${project.title} StoryMap`}
+                         type="button"
                        >
                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
                          View StoryMap
@@ -568,11 +514,11 @@ const Projects = () => {
                      </>
                    ) : (
                       <>
-                       <a href={project.detailsUrl} className="project-btn flex items-center gap-1" style={{ textDecoration: 'none', color: 'white' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} project details`}>
+                       <a href={project.detailsUrl} className="project-btn flex items-center gap-1" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} project details`}>
                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
                          Details
                        </a>
-                       {!('hideCode' in project && project.hideCode) && (
+                       {!project.hideCode && project.githubUrl && (
                          <a href={project.githubUrl} className="project-btn-outline flex items-center gap-1" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer" aria-label={`View ${project.title} source code on GitHub`}>
                            <Code className="h-4 w-4" aria-hidden="true" />
                            Code
@@ -587,7 +533,7 @@ const Projects = () => {
 
             {/* Placeholder "Coming Soon" cards */}
             {placeholders.map((placeholder) => (
-              <Card key={placeholder.id} className="group relative" style={{
+              <Card key={placeholder.id} className="project-card group relative" style={{
                 backgroundColor: themeColors.card.background,
                 border: `1px dashed ${themeColors.card.border}`,
                 opacity: 0.5
@@ -606,7 +552,7 @@ const Projects = () => {
                       <CardTitle className="text-xl" style={{ color: themeColors.colors.dark[600] }}>
                         Coming Soon
                       </CardTitle>
-                      <CardDescription className="text-gray-600 mt-2">
+                      <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
                         More exciting projects on the way! Check back soon to see what I'm working on next.
                       </CardDescription>
                     </div>
@@ -644,27 +590,28 @@ const Projects = () => {
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 0}
-              className="transition-all duration-200 hover:scale-110"
+              className="project-carousel-control transition-all duration-200 hover:scale-110"
               style={{
-                color: '#1a0a0f',
+                color: isDarkMode ? themeColors.colors.pink[100] : themeColors.colors.dark[900],
                 opacity: currentPage === 0 ? 0.3 : 1,
                 cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
                 background: 'none',
                 border: 'none',
                 padding: '4px',
-                minWidth: '28px',
-                minHeight: '28px',
+                minWidth: '44px',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
               aria-label="Previous projects"
+              type="button"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
 
             {/* Page dots */}
-            <div className="flex gap-2">
+            <div className="flex gap-1" aria-label="Project carousel pages">
               {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i}
@@ -674,42 +621,53 @@ const Projects = () => {
                       setCurrentPage(i);
                     }
                   }}
-                  className="transition-all duration-200"
+                  className="inline-flex items-center justify-center transition-all duration-200"
                   style={{
-                    width: currentPage === i ? '24px' : '8px',
-                    height: '8px',
-                    borderRadius: '4px',
-                    backgroundColor: currentPage === i
-                      ? '#1a0a0f'
-                      : '#1a0a0f',
-                    opacity: currentPage === i ? 1 : 0.3,
+                    width: '44px',
+                    height: '44px',
                     cursor: 'pointer',
                     border: 'none',
-                    padding: 0
+                    padding: 0,
+                    background: 'transparent'
                   }}
                   aria-label={`Go to page ${i + 1}`}
-                />
+                  aria-current={currentPage === i ? 'page' : undefined}
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: currentPage === i ? '24px' : '8px',
+                      height: '8px',
+                      borderRadius: '4px',
+                      backgroundColor: isDarkMode ? themeColors.colors.pink[100] : themeColors.colors.dark[900],
+                      opacity: currentPage === i ? 1 : 0.3,
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                </button>
               ))}
             </div>
 
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages - 1}
-              className="transition-all duration-200 hover:scale-110"
+              className="project-carousel-control transition-all duration-200 hover:scale-110"
               style={{
-                color: '#1a0a0f',
+                color: isDarkMode ? themeColors.colors.pink[100] : themeColors.colors.dark[900],
                 opacity: currentPage === totalPages - 1 ? 0.3 : 1,
                 cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer',
                 background: 'none',
                 border: 'none',
                 padding: '4px',
-                minWidth: '28px',
-                minHeight: '28px',
+                minWidth: '44px',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
               aria-label="Next projects"
+              type="button"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -724,10 +682,10 @@ const Projects = () => {
       />
 
       <StoryMapModal
-        isOpen={storyMapOpen}
-        onClose={() => setStoryMapOpen(false)}
-        url="https://storymaps.arcgis.com/stories/f59512cff20a4ebeb8b14570cfbae7fa"
-        title="Spatial Intelligence for Housing — Land Acquisition StoryMap"
+        isOpen={selectedStoryMap !== null}
+        onClose={() => setSelectedStoryMap(null)}
+        url={selectedStoryMap?.detailsUrl ?? ''}
+        title={selectedStoryMap?.title ?? 'StoryMap'}
       />
     </section>
   );

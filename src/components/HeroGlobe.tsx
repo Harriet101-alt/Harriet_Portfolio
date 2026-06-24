@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Globe from 'globe.gl';
+import type { GlobeInstance, GlobePoint } from 'globe.gl';
 import { WAYPOINTS, type Waypoint } from '../data/waypoints';
-import { useDarkMode } from '../contexts/DarkModeContext';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const EARTH_TEXTURE = '/globe/earth-blue-marble.jpg';
 const EARTH_BUMP    = '/globe/earth-topology.png';
@@ -26,10 +27,26 @@ const GLOBE_POINTS = WAYPOINTS.map((wp) => ({
   size: 0.45,
 }));
 
-export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
+function waypointToPoint(wp: Waypoint, size = 0.6): GlobePoint {
+  return {
+    id: wp.id,
+    lat: wp.lat,
+    lng: wp.lng,
+    color: wp.color,
+    label: wp.label,
+    size,
+  };
+}
+
+interface HeroGlobeProps {
+  compact?: boolean;
+  selectedWaypoint?: Waypoint | null;
+}
+
+export default function HeroGlobe({ compact = false, selectedWaypoint = null }: HeroGlobeProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeEl   = useRef<HTMLDivElement>(null);
-  const globeInstance = useRef<any>(null);
+  const globeInstance = useRef<GlobeInstance | null>(null);
   const timersRef = useRef<number[]>([]);
   const idleTimer = useRef<number | null>(null);
   const { isDarkMode } = useDarkMode();
@@ -72,6 +89,31 @@ export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
     controls.autoRotateSpeed = 0.5;
   }, []);
 
+  const focusWaypoint = useCallback((wp: Waypoint) => {
+    const globe = globeInstance.current;
+    if (!globe) return;
+
+    clearTimers();
+    setActiveWaypoint(wp);
+    setCardVisible(!compact);
+
+    const controls = globe.controls();
+    controls.autoRotate = false;
+
+    globe.pointsData([waypointToPoint(wp)]);
+
+    const current = globe.pointOfView();
+    globe.pointOfView({ lat: current.lat, lng: current.lng, altitude: 2.0 }, 450);
+    timersRef.current.push(
+      window.setTimeout(() => {
+        globeInstance.current?.pointOfView(
+          { lat: wp.lat, lng: wp.lng, altitude: compact ? 1.25 : wp.altitude },
+          900,
+        );
+      }, 450),
+    );
+  }, [clearTimers, compact]);
+
   // Select / deselect a waypoint
   const selectWaypoint = useCallback((wp: Waypoint | null) => {
     if (!wp) {
@@ -92,8 +134,19 @@ export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
       }, 200),
     );
     flyTo(wp);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWaypoint, flyTo, resumeIdle]);
+
+  useEffect(() => {
+    if (!selectedWaypoint) {
+      if (compact) {
+        globeInstance.current?.pointsData([]);
+        resumeIdle();
+      }
+      return;
+    }
+
+    focusWaypoint(selectedWaypoint);
+  }, [compact, focusWaypoint, resumeIdle, selectedWaypoint]);
 
   // Init globe once, size it properly after first render
   useEffect(() => {
@@ -109,7 +162,7 @@ export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
       .showAtmosphere(true)
       .atmosphereColor('rgba(147, 210, 255, 0.3)')
       .atmosphereAltitude(compact ? 0.18 : 0.15)
-      .pointsData(compact ? [] : GLOBE_POINTS)
+      .pointsData(compact ? (selectedWaypoint ? [waypointToPoint(selectedWaypoint)] : []) : GLOBE_POINTS)
       .pointAltitude((p: { size: number }) => p.size)
       .pointRadius(0.4)
       .pointColor((p: { color: string }) => p.color)
@@ -120,7 +173,8 @@ export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
       .setClearColor(0x000000, 0);
 
     if (!compact) {
-      globe.onPointClick((point: { id: string }) => {
+      globe.onPointClick((point: GlobePoint) => {
+        if (!point.id) return;
         const wp = WAYPOINTS.find((w) => w.id === point.id) ?? null;
         setActiveWaypoint((prev) => {
           if (prev?.id === wp?.id) {
@@ -192,8 +246,8 @@ export default function HeroGlobe({ compact = false }: { compact?: boolean }) {
   // Highlight active point when selection changes
   useEffect(() => {
     globeInstance.current
-      ?.pointRadius((p: any) => (activeWaypoint?.id === p.id ? 0.58 : 0.4))
-      ?.pointAltitude((p: any) => (activeWaypoint?.id === p.id ? 0.7 : p.size));
+      ?.pointRadius((p: GlobePoint) => (activeWaypoint?.id === p.id ? 0.58 : 0.4))
+      ?.pointAltitude((p: GlobePoint) => (activeWaypoint?.id === p.id ? 0.7 : p.size));
   }, [activeWaypoint]);
 
   const cardBg     = isDarkMode ? 'rgba(16,23,39,0.97)' : 'rgba(255,255,255,0.97)';

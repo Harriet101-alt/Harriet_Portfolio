@@ -1,6 +1,6 @@
 import React from 'react';
 import { Mail, Github, Linkedin } from 'lucide-react';
-import { useDarkMode } from '../contexts/DarkModeContext';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { useThemeColors } from '../hooks/useThemeColors';
 import Aurora from '../components/ui/aurora';
 import BackButton from '../components/BackButton';

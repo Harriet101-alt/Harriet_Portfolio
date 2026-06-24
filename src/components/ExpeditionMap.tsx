@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WAYPOINTS, type Waypoint, type WaypointIcon } from '../data/waypoints';
-import { useDarkMode } from '../contexts/DarkModeContext';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { withAlpha } from '../hooks/useThemeColors';
 
 // ─── PALETTE & TYPE TOKENS ───────────────────────────────────────────────────
@@ -19,33 +19,24 @@ const FONT_MONO = '"Courier Prime", "Courier New", monospace';
 const SECTION_HEIGHT_DESKTOP = 340;
 const SECTION_HEIGHT_MOBILE = 260;
 const MOBILE_BREAKPOINT = 760;
-const INSET = 80;
-const MIN_GAP_DESKTOP = 160;
-const MIN_GAP_MOBILE = 124;
-const WAVE_AMPLITUDE_DESKTOP = 32;
-const WAVE_AMPLITUDE_MOBILE = 22;
+const MAP_WIDTH = 1200;
+const MAP_HEIGHT = 450;
+const MAP_X_OFFSET = 80;
 
 const ROUTE_DURATION = 900;
-const ROUTE_STAGGER = 200;
 const PIN_STAGGER = 180;
 
 // Pin geometry — used to align SVG path endpoints with the physical pin needle bottom
 const PIN_HEAD_HEIGHT = 26;       // matches pin-head div height
 const PIN_NEEDLE_HEIGHT = 16;     // matches pin needle div height
 const PIN_CONTAINER_OFFSET = 13;  // pin container top = y - PIN_CONTAINER_OFFSET
-// Needle bottom relative to computed y: (y - 13) + 26 + 16 = y + 29
-const PIN_NEEDLE_BOTTOM_OFFSET =
-  -PIN_CONTAINER_OFFSET + PIN_HEAD_HEIGHT + PIN_NEEDLE_HEIGHT; // 29
+const PIN_NEEDLE_BOTTOM_OFFSET = -PIN_CONTAINER_OFFSET + PIN_HEAD_HEIGHT + PIN_NEEDLE_HEIGHT;
+const EXPLORER_WIDTH = 32;
+const EXPLORER_HEIGHT = 52;
 
 
-function getRouteStart(i: number) {
-  return i * ROUTE_STAGGER;
-}
-function getRouteComplete(i: number) {
-  return getRouteStart(i) + ROUTE_DURATION;
-}
 function getPinDelay(i: number) {
-  return i === 0 ? 0 : getRouteComplete(i - 1) + i * PIN_STAGGER;
+  return i * PIN_STAGGER;
 }
 
 interface PinPosition {
@@ -53,49 +44,67 @@ interface PinPosition {
   y: number;
 }
 
+interface RouteSegment {
+  p0: PinPosition;
+  p1: PinPosition;
+  p2: PinPosition;
+  p3: PinPosition;
+}
+
+const BASE_PIN_POINTS: PinPosition[] = [
+  { x: 120, y: 200 },
+  { x: 360, y: 270 },
+  { x: 600, y: 190 },
+  { x: 840, y: 270 },
+  { x: 1080, y: 200 },
+];
+
+const BASE_ROUTE_SEGMENTS: RouteSegment[] = [
+  { p0: { x: 120, y: 200 }, p1: { x: 190, y: 200 }, p2: { x: 290, y: 270 }, p3: { x: 360, y: 270 } },
+  { p0: { x: 360, y: 270 }, p1: { x: 450, y: 270 }, p2: { x: 510, y: 160 }, p3: { x: 600, y: 190 } },
+  { p0: { x: 600, y: 190 }, p1: { x: 690, y: 160 }, p2: { x: 750, y: 270 }, p3: { x: 840, y: 270 } },
+  { p0: { x: 840, y: 270 }, p1: { x: 910, y: 270 }, p2: { x: 1010, y: 200 }, p3: { x: 1080, y: 200 } },
+];
+
 function computeLayout(
   containerWidth: number,
-  count: number,
   sectionHeight: number,
-  amplitude: number,
-  minGap: number,
-): { positions: PinPosition[]; trackWidth: number } {
-  const minimumRouteWidth = count > 1 ? INSET * 2 + (count - 1) * minGap : containerWidth;
-  const trackWidth = Math.max(containerWidth, minimumRouteWidth);
-  const usableWidth = Math.max(trackWidth - INSET * 2, 0);
-  const gap = count > 1 ? usableWidth / (count - 1) : 0;
-  const midY = sectionHeight / 2;
-  const positions = Array.from({ length: count }, (_, i) => ({
-    x: count === 1 ? trackWidth / 2 : INSET + i * gap,
-    y: count === 1 ? midY : midY - amplitude * Math.cos((i * Math.PI) / (count - 1)),
-  }));
-  return { positions, trackWidth };
-}
+  isMobile: boolean,
+): { positions: PinPosition[]; segments: RouteSegment[]; trackWidth: number } {
+  const trackWidth = containerWidth;
+  const xPad = 0;
+  const yPad = isMobile ? 20 : 28;
+  const usableWidth = Math.max(trackWidth - xPad * 2, 1);
+  const usableHeight = Math.max(sectionHeight - yPad * 2, 1);
 
-function routePathD(from: PinPosition, to: PinPosition) {
-  const { p0, p1, cp1, cp2 } = routeSegment(from, to);
-  return `M ${p0.x} ${p0.y} C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${p1.x} ${p1.y}`;
-}
-
-function routeSegment(from: PinPosition, to: PinPosition) {
-  const p0 = { x: from.x, y: from.y + PIN_NEEDLE_BOTTOM_OFFSET };
-  const p1 = { x: to.x, y: to.y + PIN_NEEDLE_BOTTOM_OFFSET };
-  const dx = p1.x - p0.x;
-  const cp1 = { x: p0.x + dx * 0.4, y: p0.y };
-  const cp2 = { x: p1.x - dx * 0.4, y: p1.y };
-  return { p0, p1, cp1, cp2 };
-}
-
-function fullRoutePathD(positions: PinPosition[]) {
-  if (positions.length < 2) return '';
-
-  const start = routeSegment(positions[0], positions[1]).p0;
-  const segments = positions.slice(1).map((to, i) => {
-    const { p1, cp1, cp2 } = routeSegment(positions[i], to);
-    return `C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${p1.x} ${p1.y}`;
+  const scalePoint = ({ x, y }: PinPosition): PinPosition => ({
+    x: xPad + ((x + MAP_X_OFFSET) / MAP_WIDTH) * usableWidth,
+    y: yPad + (y / MAP_HEIGHT) * usableHeight,
   });
 
-  return `M ${start.x} ${start.y} ${segments.join(' ')}`;
+  const positions = BASE_PIN_POINTS.map(scalePoint);
+  const segments = BASE_ROUTE_SEGMENTS.map((segment) => ({
+    p0: scalePoint(segment.p0),
+    p1: scalePoint(segment.p1),
+    p2: scalePoint(segment.p2),
+    p3: scalePoint(segment.p3),
+  }));
+
+  return { positions, segments, trackWidth };
+}
+
+function fullRoutePathD(segments: RouteSegment[]) {
+  if (!segments.length) return '';
+
+  const first = segments[0].p0;
+  const curves = segments.map((segment) => {
+    const c1y = segment.p1.y + PIN_NEEDLE_BOTTOM_OFFSET;
+    const c2y = segment.p2.y + PIN_NEEDLE_BOTTOM_OFFSET;
+    const p3y = segment.p3.y + PIN_NEEDLE_BOTTOM_OFFSET;
+    return `C ${segment.p1.x} ${c1y} ${segment.p2.x} ${c2y} ${segment.p3.x} ${p3y}`;
+  });
+
+  return `M ${first.x} ${first.y + PIN_NEEDLE_BOTTOM_OFFSET} ${curves.join(' ')}`;
 }
 
 function formatCoordinate(lat: number, lng: number) {
@@ -185,7 +194,7 @@ function RoutePath({ d, color, drawn, delay }: { d: string; color: string; drawn
       ref={ref}
       d={d}
       stroke={color}
-      strokeWidth={1.5}
+      strokeWidth={2}
       fill="none"
       strokeLinecap="round"
       strokeDasharray={revealed ? '6 4' : length || 1}
@@ -222,7 +231,7 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
       style={{
         position: 'absolute',
         left: x,
-        top: y - 13,
+        top: y - PIN_CONTAINER_OFFSET,
         transform: 'translateX(-50%)',
         display: 'flex',
         flexDirection: 'column',
@@ -240,7 +249,7 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
         if (e.key === 'Enter' || e.key === ' ') onClick(index);
       }}
     >
-      <div style={{ position: 'relative', width: 26, height: 26 }}>
+      <div style={{ position: 'relative', width: PIN_HEAD_HEIGHT, height: PIN_HEAD_HEIGHT }}>
         {isActive && (
           <span
             key={pulseKey}
@@ -257,8 +266,8 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
         <div
           className="pin-head"
           style={{
-            width: 26,
-            height: 26,
+            width: PIN_HEAD_HEIGHT,
+            height: PIN_HEAD_HEIGHT,
             borderRadius: '50%',
             background: waypoint.color,
             display: 'flex',
@@ -271,7 +280,7 @@ function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinR
           <WaypointGlyph icon={waypoint.icon} color={PAPER} />
         </div>
       </div>
-      <div style={{ width: 2, height: 16, background: waypoint.color }} />
+      <div style={{ width: 2, height: PIN_NEEDLE_HEIGHT, background: waypoint.color }} />
       <div style={{ marginTop: 4, textAlign: 'center', maxWidth: 104 }}>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 600, color: isDarkMode ? 'rgba(255,255,255,0.9)' : INK, lineHeight: 1.25 }}>
           {waypoint.label}
@@ -403,38 +412,41 @@ function ExplorerCharacter() {
 
 export default function ExpeditionMap() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const trackWrapperRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const hasAnimatedRef = useRef(false);
   const hideTimerRef = useRef<number | null>(null);
   const pinRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const [layoutWidth, setLayoutWidth] = useState(0);
   const [started, setStarted] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [explorerIndex, setExplorerIndex] = useState(0);
   const [activeCard, setActiveCard] = useState<ActiveCardState | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
-  const [hasScrolled, setHasScrolled] = useState(false);
 
   const { isDarkMode } = useDarkMode();
 
   useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const track = trackRef.current;
+    if (!track) return;
+
+    const updateWidth = () => setLayoutWidth(track.getBoundingClientRect().width || window.innerWidth);
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(track);
+    return () => observer.disconnect();
   }, []);
 
-  const isMobile = viewportWidth < MOBILE_BREAKPOINT;
+  const resolvedWidth = layoutWidth || window.innerWidth;
+  const isMobile = resolvedWidth < MOBILE_BREAKPOINT;
   const sectionHeight = isMobile ? SECTION_HEIGHT_MOBILE : SECTION_HEIGHT_DESKTOP;
-  const waveAmplitude = isMobile ? WAVE_AMPLITUDE_MOBILE : WAVE_AMPLITUDE_DESKTOP;
-  const minGap = isMobile ? MIN_GAP_MOBILE : MIN_GAP_DESKTOP;
 
-  const { positions, trackWidth } = useMemo(
-    () => computeLayout(viewportWidth, WAYPOINTS.length, sectionHeight, waveAmplitude, minGap),
-    [viewportWidth, sectionHeight, waveAmplitude, minGap],
+  const { positions, segments, trackWidth } = useMemo(
+    () => computeLayout(resolvedWidth, sectionHeight, isMobile),
+    [resolvedWidth, sectionHeight, isMobile],
   );
-  const needsScroll = trackWidth > viewportWidth;
-  const currentWaypoint = activeIndex === null ? WAYPOINTS[0] : WAYPOINTS[activeIndex];
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -453,14 +465,6 @@ export default function ExpeditionMap() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const wrapper = trackWrapperRef.current;
-    if (!wrapper) return;
-    const handleScroll = () => setHasScrolled(true);
-    wrapper.addEventListener('scroll', handleScroll, { passive: true });
-    return () => wrapper.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const handlePinClick = useCallback((index: number) => {
     if (hideTimerRef.current) {
       window.clearTimeout(hideTimerRef.current);
@@ -470,6 +474,7 @@ export default function ExpeditionMap() {
     const turningOn = activeIndex !== index;
     if (turningOn) {
       setActiveIndex(index);
+      setExplorerIndex(index);
       setPulseKey(Date.now()); // Restart pulse animation on re-click
 
       const pinEl = pinRefs.current[index];
@@ -496,9 +501,7 @@ export default function ExpeditionMap() {
 
   const sectionStyle: React.CSSProperties = {
     position: 'relative',
-    left: '50%',
-    width: '100vw',
-    transform: 'translateX(-50%)',
+    width: '100%',
     height: sectionHeight,
     background: isDarkMode ? 'rgba(10, 8, 4, 0.55)' : PAPER,
     overflow: 'visible',
@@ -569,59 +572,53 @@ export default function ExpeditionMap() {
       />
 
       <div
-        ref={trackWrapperRef}
+        ref={trackRef}
         className="expedition-track"
         style={{
           position: 'relative',
           width: '100%',
           height: '100%',
-          overflowX: needsScroll ? 'auto' : 'hidden',
+          overflowX: 'hidden',
           overflowY: 'hidden',
           scrollbarWidth: 'none',
         }}
       >
-        <div style={{ position: 'relative', width: trackWidth, height: '100%', margin: needsScroll ? undefined : '0 auto' }}>
+        <div style={{ position: 'relative', width: trackWidth, height: '100%', margin: '0 auto' }}>
           <svg
             width={trackWidth}
             height={sectionHeight}
             style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}
           >
-            {WAYPOINTS.slice(1).map((wp, idx) => (
-              <RoutePath
-                key={wp.id}
-                d={routePathD(positions[idx], positions[idx + 1])}
-                color={wp.color}
-                drawn={started}
-                delay={getRouteStart(idx)}
+            <RoutePath d={fullRoutePathD(segments)} color={PENCIL} drawn={started} delay={0} />
+
+            {positions.map((pos, i) => (
+              <circle
+                key={`node-${WAYPOINTS[i].id}`}
+                cx={pos.x}
+                cy={pos.y + PIN_NEEDLE_BOTTOM_OFFSET}
+                r={3.5}
+                fill={withAlpha(PENCIL, 0.65)}
               />
             ))}
-
-            {/* Hidden combined route for explorer animation */}
-            {positions.length >= 2 && (
-              <path
-                id="expedition-full-route"
-                d={fullRoutePathD(positions)}
-                fill="none"
-                stroke="none"
-              />
-            )}
-
-            {/* Explorer character */}
-            {positions.length >= 2 && started && (
-              <g>
-                <animateMotion
-                  dur="12s"
-                  repeatCount="indefinite"
-                  rotate="0"
-                >
-                  <mpath href="#expedition-full-route" />
-                </animateMotion>
-                <g transform="translate(-16, -48)">
-                  <ExplorerCharacter />
-                </g>
-              </g>
-            )}
           </svg>
+
+          {started && (
+            <div
+              style={{
+                position: 'absolute',
+                left: positions[explorerIndex].x - EXPLORER_WIDTH / 2,
+                top: positions[explorerIndex].y + PIN_NEEDLE_BOTTOM_OFFSET - EXPLORER_HEIGHT,
+                width: EXPLORER_WIDTH,
+                height: EXPLORER_HEIGHT,
+                pointerEvents: 'none',
+                transition: 'left 700ms cubic-bezier(0.22, 1, 0.36, 1), top 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+              }}
+            >
+              <svg viewBox="0 0 32 52" width={EXPLORER_WIDTH} height={EXPLORER_HEIGHT}>
+                <ExplorerCharacter />
+              </svg>
+            </div>
+          )}
 
           {WAYPOINTS.map((wp, i) => (
             <Pin
@@ -644,26 +641,6 @@ export default function ExpeditionMap() {
         <FloatingInfoCard state={activeCard} onClose={() => { setActiveIndex(null); setActiveCard(null); }} />
       )}
 
-      {needsScroll && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 16,
-            bottom: 12,
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            color: isDarkMode ? 'rgba(255,255,255,0.5)' : INK_FAINT,
-            letterSpacing: '0.05em',
-            borderBottom: `1px dashed ${isDarkMode ? 'rgba(255,255,255,0.3)' : PENCIL}`,
-            opacity: hasScrolled ? 0 : 1,
-            transition: 'opacity 600ms ease',
-            pointerEvents: 'none',
-          }}
-        >
-          scroll →
-        </div>
-      )}
-
       <div
         style={{
           position: 'fixed',
@@ -679,7 +656,7 @@ export default function ExpeditionMap() {
           zIndex: 50,
         }}
       >
-        Currently: {currentWaypoint.label} - {currentWaypoint.sublabel}
+        Currently: living in Liverpool
       </div>
     </section>
   );

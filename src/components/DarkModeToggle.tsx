@@ -31,10 +31,11 @@ const DarkModeToggle: React.FC<DarkModeToggleProps> = ({ checked, onChange }) =>
         border: 'none',
         cursor: 'pointer',
         padding: 0,
-        outline: 'none',
         position: 'relative'
       }}
+      type="button"
       aria-label={`Switch to ${checked ? 'light' : 'dark'} mode`}
+      aria-pressed={checked}
       title={`Switch to ${checked ? 'light' : 'dark'} mode`}
     >
       <div

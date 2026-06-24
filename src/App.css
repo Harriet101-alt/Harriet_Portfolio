@@ -75,16 +75,25 @@ select:focus {
   border-radius: 4px;
 }
 
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Skip to main content link */
 .skip-link {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #B8727C; /* Darker dusty pink for better contrast */
-  color: white;
+  background: var(--color-pink-600);
+  color: var(--color-white);
   padding: 8px 16px;
   border-radius: 0 0 4px 0;
-  z-index: 100;
+  z-index: 100000;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
@@ -249,13 +258,13 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
-  outline: none;
   display: flex;
   align-items: center;
 }
 
-.nav-tab:focus {
-  outline: none;
+.nav-tab:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 4px;
 }
 
 .nav-tab::after {
@@ -496,6 +505,12 @@ body {
   filter: brightness(1.2);
 }
 
+.special-draggable-star:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 6px;
+  border-radius: 999px;
+}
+
 /* Ensure project cards are above stars */
 #projects .grid > * {
   position: relative;
@@ -514,11 +529,11 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 3px 10px rgba(234, 190, 195, 0.3);
-  outline: none;
 }
 
-.scroll-down-btn:focus {
-  outline: none;
+.scroll-down-btn:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 4px;
 }
 
 .scroll-down-btn:hover {
@@ -539,16 +554,29 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(234, 190, 195, 0.4);
-  outline: none;
 }
 
-.project-btn:focus {
-  outline: none;
+.project-btn,
+.project-btn:visited,
+.project-btn:active {
+  color: var(--white);
+}
+
+.project-btn:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 4px;
 }
 
 .project-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(234, 190, 195, 0.5);
+}
+
+.project-btn:active,
+.project-btn-outline:active,
+.hero-action-btn:active,
+.scroll-down-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .project-btn-outline {
@@ -562,7 +590,6 @@ body {
   border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s ease;
-  outline: none;
 }
 
 .dark .project-btn-outline {
@@ -571,14 +598,53 @@ body {
   border-color: #D9A5AC;
 }
 
-.project-btn-outline:focus {
-  outline: none;
+.project-btn-outline:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 4px;
 }
 
 .project-btn-outline:hover {
   background: var(--lavender-blush);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(234, 190, 195, 0.3);
+}
+
+.project-carousel-control:focus-visible {
+  outline: 2px solid var(--dusty-pink-darker);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.card-geo-layer,
+.project-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-geo-layer::before,
+.project-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(139, 90, 101, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 90, 101, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.24;
+  mask-image: linear-gradient(140deg, black, transparent 70%);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .dark .project-btn-outline:hover {
@@ -918,17 +984,19 @@ section, .section-wrapper {
 /* ── Experience / Skills / Certifications ── */
 #experience, #skills, #certifications { background: transparent !important; }
 
-/* Generic card/panel */
-[class*="card"], [class*="Card"],
-[class*="panel"], [class*="Panel"],
-[class*="section-content"],
-[class*="skill-item"], [class*="cert-item"],
-[class*="experience-item"], [class*="timeline"] {
+.jungle-glass {
   background: rgba(252, 248, 240, 0.75) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-color: rgba(160, 130, 80, 0.18) !important;
   color: #2a1a08 !important;
+}
+
+.card-geo-layer,
+.project-card {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-color: rgba(160, 130, 80, 0.18) !important;
 }
 
 /* Section headings */
@@ -999,4 +1067,25 @@ footer, .footer {
   .forest-willow-layer,
   .forest-lily-layer,
   .forest-grass-layer { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .draggable-star,
+  .special-draggable-star,
+  .ivy-vine {
+    animation: none !important;
+  }
 }

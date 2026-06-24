@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
+import { colors } from '../../styles/colors';
 
 interface StoryMapModalProps {
   isOpen: boolean;
@@ -14,13 +15,21 @@ export default function StoryMapModal({
   url,
   title,
 }: StoryMapModalProps): ReactElement | null {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      previousActiveElement?.focus();
+    };
   }, [isOpen, onClose]);
 
   useEffect(() => {
@@ -46,7 +55,7 @@ export default function StoryMapModal({
         position: 'fixed',
         inset: 0,
         zIndex: 999,
-        background: 'rgba(10, 10, 20, 0.85)',
+        background: 'rgba(10, 15, 27, 0.86)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -59,7 +68,7 @@ export default function StoryMapModal({
           width: '100%',
           maxWidth: '1100px',
           height: '85vh',
-          background: '#fff',
+          background: colors.white,
           borderRadius: '12px',
           overflow: 'hidden',
           position: 'relative',
@@ -68,18 +77,20 @@ export default function StoryMapModal({
         className="sm:rounded-xl rounded-none sm:mx-0"
       >
         <button
+          ref={closeButtonRef}
           onClick={onClose}
           aria-label="Close StoryMap"
+          type="button"
           style={{
             position: 'absolute',
             top: '12px',
             right: '12px',
             zIndex: 10,
-            width: '36px',
-            height: '36px',
+            width: '44px',
+            height: '44px',
             borderRadius: '50%',
-            background: 'rgba(0,0,0,0.6)',
-            color: '#fff',
+            background: colors.dark[900],
+            color: colors.white,
             border: 'none',
             fontSize: '18px',
             cursor: 'pointer',

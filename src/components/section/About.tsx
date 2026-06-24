@@ -6,21 +6,22 @@ import FlipJournal from '../FlipJournal';
 import ExpeditionMap from '../ExpeditionMap';
 import HeroGlobe from '../HeroGlobe';
 import Lanyard from '../ui/lanyard';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors, withAlpha } from '../../hooks/useThemeColors';
 import { profile1, profile2, profile3, stickers as stickerImages, whiteLily, liRedLily, darkRedLily, greenRocks, lakeMountain, tropics } from '../../assets';
+import type { Waypoint } from '../../data/waypoints';
 
 
 const About = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [, setAsciiText] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [nameText, setNameText] = useState('');
+  const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const collageRef = useRef<HTMLDivElement>(null);
-  const [collageVisible, setCollageVisible] = useState(false);
+  const [, setCollageVisible] = useState(false);
   const { isDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
 
@@ -46,28 +47,6 @@ const About = () => {
     { src: profile2, caption: "photo 2" },
     { src: profile3, caption: "photo 3" }
   ];
-
-  // Typewriter effect for ASCII art
-  useEffect(() => {
-    let currentIndex = 0;
-    const typingSpeed = 3; // Speed in milliseconds
-
-    const typeWriter = () => {
-      if (currentIndex < fullAsciiArt.length) {
-        setAsciiText(fullAsciiArt.substring(0, currentIndex + 1));
-        currentIndex++;
-        setTimeout(typeWriter, typingSpeed);
-      }
-    };
-
-    // Start typing after a small delay
-    const startDelay = setTimeout(() => {
-      typeWriter();
-    }, 500);
-
-    return () => clearTimeout(startDelay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
 
   useEffect(() => {
     let ticking = false;
@@ -267,10 +246,9 @@ const About = () => {
                   <TypewriterCarousel roles={roles} className={isDarkMode ? 'hero-subtitle-dark' : 'hero-subtitle-light'} />
                 </div>
               </div>
-              {/* About Me text — solid white card matching project card style */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid rgba(234, 190, 195, 0.35)',
+              <div className="card-geo-layer" style={{
+                background: themeColors.card.background,
+                border: `1px solid ${themeColors.card.border}`,
                 borderRadius: '12px',
                 padding: '16px 20px',
                 maxWidth: '480px',
@@ -281,13 +259,13 @@ const About = () => {
                   "I am a Junior Developer from Liverpool, graduating with an MSc in Data Science and Artificial Intelligence in July. I studied Ecology and Conservation BSc(Hons) which taught me to read complex ecosystems before ever reading code. This instinct shapes how I approach the problems I encounter.",
                   "I apply AI to automate repetitive processes, freeing up space for the project elements requiring a human mind. I'm drawn to the craft of building thoughtful, usable interfaces and to the quieter work of supporting geographical research using computational methodology.",
                   "More recently, I've been utilising GIS, where my environmental background and engineering skills intersect.",
-                  "I am motivated by novel challenges and believe that education is a life long endevor.",
-                  "Whether it be working inacademia or industry; I'm comfortable letting curiosity lead the way.",
+                  "I am motivated by novel challenges and believe that education is a lifelong endeavour.",
+                  "Whether working in academia or industry, I'm comfortable letting curiosity lead the way.",
                 ].map((text, i, arr) => (
                   <p key={i} style={{
                     fontSize: '0.9rem',
                     lineHeight: 1.85,
-                    color: 'rgba(30, 18, 8, 0.82)',
+                    color: themeColors.text.secondary,
                     marginBottom: i < arr.length - 1 ? '1.1rem' : 0,
                     fontFamily: '"Lora", Georgia, serif',
                   }}>{text}</p>
@@ -427,7 +405,7 @@ const About = () => {
                   transform: 'rotate(6deg)',
                   zIndex: 18,
                 }}>
-                  <HeroGlobe compact />
+                  <HeroGlobe compact selectedWaypoint={selectedWaypoint} />
                 </div>
 
                 {/* Lanyard — z-index 20 (above mount z-14 and globe z-18) */}
@@ -441,7 +419,7 @@ const About = () => {
       </div>
 
       {/* Expedition Map */}
-      <ExpeditionMap />
+      <ExpeditionMap selectedWaypoint={selectedWaypoint} onSelectWaypoint={setSelectedWaypoint} />
 
       {/* About Section with Stickers and Journal */}
       <div className="py-8 md:py-12" style={{

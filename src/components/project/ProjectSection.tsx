@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors } from '../../hooks/useThemeColors';
 
 interface ProjectSectionProps {

@@ -1,4 +1,4 @@
-import { useDarkMode } from '../contexts/DarkModeContext';
+import { useDarkMode } from './useDarkMode';
 import { colors, getThemeColors } from '../styles/colors';
 import type { ColorTheme } from '../styles/colors';
 

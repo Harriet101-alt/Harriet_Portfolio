@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors, withAlpha } from '../../hooks/useThemeColors';
 import { lightStars, darkStars } from '../../assets/stars';
 import { stickers } from '../../assets/stickers';
 import StoryMapModal from '../ui/StoryMapModal';
+import { portfolioProjects, type PortfolioProject } from '../../data/projects';
 
 // ─── PUNK-GIRLY ACCENT PALETTE ───────────────────────────────────────────────
 // These augment the template's existing soft pink/lavender theme — they
@@ -81,102 +82,6 @@ const WORK_ENTRIES: WorkEntry[] = [
       'Engineered an Excel dashboard for microbial treatment review with a dynamic multi-point monitoring interface improving data interpretation speed by 25%, recording 97% biocidal efficacy of bromine in water sterilisation',
     ],
     impact: 'Improved data interpretation speed by 25%',
-  },
-];
-
-interface ProjectEntry {
-  title: string;
-  context: string;
-  badge: string;
-  stack: string[];
-  summary: string;
-  bullets: string[];
-}
-
-const PROJECT_ENTRIES: ProjectEntry[] = [
-  {
-    title: 'Land Acquisition Application for Residential Development',
-    context: 'Esri UK Project · April 2026',
-    badge: 'SPATIAL',
-    stack: ['ArcGIS', 'Open Data', 'Planning'],
-    summary: 'Multi-criteria spatial scoring and 3D constraint validation for residential development site selection.',
-    bullets: [
-      'Developed a multi-criteria site scoring application in ArcGIS integrating government open data (Housing Delivery Test scores, Land Registry house prices, Environment Agency ecological constraints, OS amenity layers) to rank candidate sites by planning permission viability',
-      'Built a 3D constraint validation application using Esri tools to cross-reference proposed developments against ecological regulation boundaries, flood risk zones, and amenity proximity thresholds — enabling designers to surface conflicts prior to planning submission',
-    ],
-  },
-  {
-    title: 'Carbon Biomass Estimation',
-    context: 'MSc Thesis · University of Liverpool · 2025–2026',
-    badge: 'ML',
-    stack: ['Python', 'XGBoost', 'Random Forest', 'SVR', 'Streamlit', 'SoilGrids', 'GLDAS'],
-    summary: 'Stacked ensemble model predicting above-ground carbon biomass across Rimba Raya, Indonesia, with an interactive Streamlit dashboard for non-technical stakeholders.',
-    bullets: [
-      'Built a heterogeneous stacked ensemble model (Random Forest, SVR, and XGBoost with a Ridge meta-learner) trained on above-ground carbon biomass reference values from the ESSD Global Carbon Biomass dataset, predicting biomass distribution across Rimba Raya, Indonesia — applying 5-fold nested cross-validation to reduce overfitting by ~6% and produce a fully reproducible Python pipeline.',
-      'Used seven environmental co-variates as predictive features — soil granularity fractions (clay, silt, sand at 0–5cm depth) from SoilGrids ISRIC, peatland fraction from the ML Global Peatland Extent Dataset, elevation from SRTM 90m, root zone soil moisture from NASA GLDAS CLSM, and daily precipitation from CHIRPS — demonstrating that freely available remote sensing and geospatial datasets can drive accurate large-scale carbon stock estimation without field sampling.',
-      'Engineered a Streamlit application to give non-technical stakeholders an interactive dashboard exposing the model\'s internal logic — visualising feature importance, prediction confidence, and how individual environmental co-variates drive biomass estimates — directly addressing the black-box problem inherent in ensemble ML by making model behaviour interpretable and auditable without requiring statistical expertise.',
-    ],
-  },
-  {
-    title: 'Regulatory Compliance Checker',
-    context: 'Pfizer Pharma Hackathon · March 2026',
-    badge: 'HACKATHON WIN',
-    stack: ['Next.js', 'TypeScript', 'Regulatory Review'],
-    summary: 'Build-time regulatory validation pipeline for pharma digital assets.',
-    bullets: [
-      'Architected a Next.js pipeline that cross-references promotional drug content against regulatory guidelines at build time, surfacing non-compliant copy as flagged warnings and eliminating a class of pre-launch manual review for regulated digital assets',
-    ],
-  },
-  {
-    title: 'Distributed Task-Scheduling Architecture',
-    context: 'Ultamation / Sciontech Hackathon · Feb 2026',
-    badge: 'SPATIAL',
-    stack: ['Python', 'CSP', 'DAG'],
-    summary: 'Race condition elimination and optimal load distribution across a 500-task automation environment.',
-    bullets: [
-      'A 500-task, 5-server automation environment was suffering race conditions and uneven load distribution',
-      'Formalised the problem as a Constraint Satisfaction Problem (CSP) and architected a DAG traversal engine with dependency-aware batching heuristics, eliminating all race conditions and reducing execution latency to the theoretical minimum for the given workload',
-    ],
-  },
-  {
-    title: 'Parts of Speech Tagging (POS)',
-    context: 'MSc NLP Project · 2025',
-    badge: 'RESEARCH',
-    stack: ['PyTorch', 'Transformer', 'BiLSTM', 'Optuna'],
-    summary: 'End-to-end clinical NLP pipeline comparing BiLSTM and Transformer architectures.',
-    bullets: [
-      "Engineered an end-to-end clinical NLP pipeline (BiLSTM & Transformer, PyTorch) with torchtext tokenisation and Optuna Bayesian hyperparameter optimisation — Transformer outperformed BiLSTM by 5.8% F1, attributed to self-attention's resolution of long-range dependency loss inherent in sequential hidden state compression",
-    ],
-  },
-  {
-    title: 'Geospatial Socioeconomic Analysis',
-    context: 'MSc Project · Austin, TX · 2025',
-    badge: 'SPATIAL',
-    stack: ['QGIS', 'DBSCAN', 'GeoPandas', 'Census API'],
-    summary: 'Spatial clustering to identify income inequality hotspots across Austin, TX.',
-    bullets: [
-      'Applied LISA spatial autocorrelation and DBSCAN clustering to Census API geodata to identify income-inequality hotspots across Austin, TX. Visualised in QGIS, demonstrating ArcGIS-equivalent workflows in open-source tooling',
-    ],
-  },
-  {
-    title: 'Obesity Classifier for Health Risk Prediction',
-    context: 'MSc Project · 2025',
-    badge: 'ML',
-    stack: ['Python', 'Random Forest', 'Sci-kit Learn'],
-    summary: 'High-accuracy Random Forest classifier on clinical records for health risk prediction.',
-    bullets: [
-      'Trained a Random Forest classifier on 2,111 clinical records achieving 0.96 F1 / 0.999 AUC; stratified K-Fold CV and correlation-matrix pre-processing addressed class imbalance and multicollinearity',
-    ],
-  },
-  {
-    title: 'Mapping Population Change Across Africa',
-    context: 'MSc Project · 2025',
-    badge: 'SPATIAL',
-    stack: ['Raster', 'QGIS', 'Visualization'],
-    summary: 'Geographically accurate choropleth mapping of population density change across Africa 2015–2025.',
-    bullets: [
-      'Reprojected raster data to equal-area CRS for geometrically accurate proportional calculations, applied accessible diverging colour schemes, and implemented tooltip interactivity for spatial exploration of population density change throughout Africa (2015–2025)',
-    ],
   },
 ];
 
@@ -421,6 +326,7 @@ function EduStamp({ color, stampText, centerText, rotation }: { color: string; s
 }
 
 function ExpandableEntry({
+  id,
   isOpen,
   onToggle,
   header,
@@ -429,6 +335,7 @@ function ExpandableEntry({
   borderColor,
   hoverBg,
 }: {
+  id: string;
   isOpen: boolean;
   onToggle: () => void;
   header: ReactNode;
@@ -464,10 +371,11 @@ function ExpandableEntry({
         className="w-full text-left"
         style={{ background: 'transparent', border: 'none', padding: '16px 18px', cursor: 'pointer' }}
         aria-expanded={isOpen}
+        aria-controls={id}
       >
         {header}
       </button>
-      <div style={{ maxHeight, overflow: 'hidden', transition: `max-height 380ms ${EASE_RESISTANCE}` }}>
+      <div id={id} style={{ maxHeight, overflow: 'hidden', transition: `max-height 380ms ${EASE_RESISTANCE}` }}>
         <div ref={bodyRef} style={{ padding: '0 18px 18px' }}>
           {body}
         </div>
@@ -487,7 +395,7 @@ export default function ExperienceSection() {
   const [openWork, setOpenWork] = useState<Set<number>>(new Set());
   const [openProjects, setOpenProjects] = useState<Set<number>>(new Set());
   const [openEducation, setOpenEducation] = useState<Set<number>>(new Set());
-  const [storyMapOpen, setStoryMapOpen] = useState(false);
+  const [selectedStoryMap, setSelectedStoryMap] = useState<PortfolioProject | null>(null);
   const [sectionVisible, setSectionVisible] = useState(false);
   const [dismissedHints, setDismissedHints] = useState<Set<TabId>>(new Set());
   const sectionRef = useRef<HTMLElement>(null);
@@ -528,7 +436,6 @@ export default function ExperienceSection() {
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
         @keyframes punkStarBob {
           0%, 100% { transform: translateY(0) rotate(var(--star-rot, 0deg)); }
           50% { transform: translateY(-6px) rotate(var(--star-rot, 0deg)); }
@@ -630,6 +537,7 @@ export default function ExperienceSection() {
               )}
               {WORK_ENTRIES.map((entry, i) => (
                 <ExpandableEntry
+                  id={`work-entry-${i}`}
                   key={entry.title}
                   isOpen={openWork.has(i)}
                   onToggle={() => {
@@ -682,60 +590,16 @@ export default function ExperienceSection() {
                 className="absolute pointer-events-none select-none hidden md:block"
                 style={{ top: '-34px', right: '-26px', width: '64px', transform: 'rotate(8deg)' }}
               />
-              {PROJECT_ENTRIES.map((entry, i) => {
-                const isLandAcquisition = entry.title === 'Land Acquisition Application for Residential Development';
-
-                if (isLandAcquisition) {
-                  return (
-                    <ExpandableEntry
-                      key={entry.title}
-                      isOpen={false}
-                      onToggle={() => {
-                        dismissHint('projects');
-                        setStoryMapOpen(true);
-                      }}
-                      cardBg={cardBg}
-                      borderColor={cardBorder}
-                      hoverBg={cardHoverBg}
-                      header={
-                        <div className="flex justify-between items-start gap-4">
-                          <div>
-                            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
-                              {entry.title}
-                              <span
-                                title="Opens StoryMap"
-                                style={{
-                                  marginLeft: '8px',
-                                  fontSize: '0.75rem',
-                                  verticalAlign: 'middle',
-                                  opacity: 0.7,
-                                  fontFamily: 'monospace',
-                                  color: '#FF1F7D',
-                                }}
-                              >
-                                ↗
-                              </span>
-                            </h3>
-                            <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: themeColors.textSecondary, margin: '2px 0 8px' }}>{entry.context}</p>
-                            <div>
-                              {entry.stack.map((s, si) => <ZineTag key={s} label={s} index={si} />)}
-                            </div>
-                          </div>
-                          {entry.badge === 'HACKATHON WIN'
-                            ? <HackathonPill label={entry.badge} rotation={i % 2 === 0 ? -1 : 1.5} />
-                            : <CategoryPill label={entry.badge} rotation={i % 2 === 0 ? -1 : 1.2} />}
-                        </div>
-                      }
-                      body={null}
-                    />
-                  );
-                }
-
+              {portfolioProjects.map((entry, i) => {
                 return (
                 <ExpandableEntry
+                  id={`project-entry-${i}`}
                   key={entry.title}
                   isOpen={openProjects.has(i)}
-                  onToggle={() => toggle(openProjects, setOpenProjects, i)}
+                  onToggle={() => {
+                    dismissHint('projects');
+                    toggle(openProjects, setOpenProjects, i);
+                  }}
                   cardBg={cardBg}
                   borderColor={cardBorder}
                   hoverBg={cardHoverBg}
@@ -747,7 +611,7 @@ export default function ExperienceSection() {
                         </h3>
                         <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: themeColors.textSecondary, margin: '2px 0 8px' }}>{entry.context}</p>
                         <div>
-                          {entry.stack.map((s, si) => <ZineTag key={s} label={s} index={si} />)}
+                          {entry.technologies.map((s, si) => <ZineTag key={s} label={s} index={si} />)}
                         </div>
                       </div>
                       {entry.badge === 'HACKATHON WIN'
@@ -757,14 +621,23 @@ export default function ExperienceSection() {
                   }
                   body={
                     <>
-                      <p style={{ fontSize: '0.88rem', lineHeight: 1.7, color: themeColors.textSecondary, margin: '0 0 10px', fontStyle: 'italic' }}>{entry.summary}</p>
+                      <p style={{ fontSize: '0.88rem', lineHeight: 1.7, color: themeColors.textSecondary, margin: '0 0 10px', fontStyle: 'italic' }}>{entry.experienceSummary}</p>
                       <ul style={{ margin: 0, padding: '0 0 0 16px', listStyle: 'disc' }}>
-                        {entry.bullets.map((b, bi) => (
-                          <li key={bi} style={{ fontSize: '0.88rem', lineHeight: 1.75, color: themeColors.textPrimary, marginBottom: bi < entry.bullets.length - 1 ? '8px' : 0 }}>
+                        {entry.experienceBullets.map((b, bi) => (
+                          <li key={bi} style={{ fontSize: '0.88rem', lineHeight: 1.75, color: themeColors.textPrimary, marginBottom: bi < entry.experienceBullets.length - 1 ? '8px' : 0 }}>
                             {b}
                           </li>
                         ))}
                       </ul>
+                      {entry.isStoryMap && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStoryMap(entry)}
+                          style={{ marginTop: '12px', color: PUNK_PINK, fontFamily: FONT_MONO, fontSize: '0.78rem', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                        >
+                          Open StoryMap
+                        </button>
+                      )}
                     </>
                   }
                 />
@@ -780,6 +653,7 @@ export default function ExperienceSection() {
               )}
               {EDUCATION_ENTRIES.map((entry, i) => (
                 <ExpandableEntry
+                  id={`education-entry-${i}`}
                   key={entry.degree}
                   isOpen={openEducation.has(i)}
                   onToggle={() => {
@@ -827,10 +701,10 @@ export default function ExperienceSection() {
       </div>
 
       <StoryMapModal
-        isOpen={storyMapOpen}
-        onClose={() => setStoryMapOpen(false)}
-        url="https://storymaps.arcgis.com/stories/f59512cff20a4ebeb8b14570cfbae7fa"
-        title="Spatial Intelligence for Housing — Land Acquisition StoryMap"
+        isOpen={selectedStoryMap !== null}
+        onClose={() => setSelectedStoryMap(null)}
+        url={selectedStoryMap?.detailsUrl ?? ''}
+        title={selectedStoryMap?.title ?? 'StoryMap'}
       />
     </section>
   );

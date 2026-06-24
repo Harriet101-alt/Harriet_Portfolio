@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DarkModeToggle from '../DarkModeToggle';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors, withAlpha } from '../../hooks/useThemeColors';
 
 const Navigation = () => {
@@ -23,10 +23,8 @@ const Navigation = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Check if scrolled
       setIsScrolled(window.scrollY > 10);
 
-      // Update active tab
       const sections = tabs.map(tab => tab.id);
       const currentSection = sections.find(section => {
         const element = document.getElementById(section);
@@ -43,25 +41,31 @@ const Navigation = () => {
     };
 
     const handleResize = () => {
-      // Close mobile menu if screen becomes desktop size
       if (window.innerWidth >= 768 && isMobileMenuOpen) {
         setIsMobileMenuOpen(false);
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [tabs, isMobileMenuOpen]);
 
   const scrollToSection = (sectionId: string) => {
-    // If we're not on the home page, navigate there first
     if (location.pathname !== '/') {
       navigate('/', { replace: true });
-      // Wait for navigation and then scroll
       setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
@@ -69,13 +73,12 @@ const Navigation = () => {
         }
       }, 100);
     } else {
-      // We're already on the home page, just scroll
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
-    setIsMobileMenuOpen(false); // Close mobile menu after navigation
+    setIsMobileMenuOpen(false);
   };
 
   const toggleMobileMenu = () => {
@@ -105,16 +108,18 @@ const Navigation = () => {
       }}>
       <div className="nav-container">
         <button className="signature-name"
+          type="button"
           style={{ 
             cursor: 'pointer', 
-            color: '#1a1208', 
+            color: isDarkMode ? themeColors.colors.pink[100] : '#1a1208',
             background: 'none', 
             border: 'none',
-            outline: 'none',
-            WebkitTextFillColor: '#1a1208',
-            textShadow: '0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.18)'
+            WebkitTextFillColor: isDarkMode ? themeColors.colors.pink[100] : '#1a1208',
+            textShadow: isDarkMode
+              ? `0 1px 12px ${withAlpha(themeColors.colors.pink[300], 0.24)}`
+              : '0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.18)'
           }}
-          onClick={() => window.location.href = '/'}
+          onClick={() => navigate('/')}
           aria-label="About Me - Go to homepage">
           About Me
         </button>
@@ -128,6 +133,8 @@ const Navigation = () => {
               className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
               style={{ color: themeColors.text.accent }}
               aria-label={`Navigate to ${tab.label} section`}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
+              type="button"
             >
               {tab.label}
             </button>
@@ -146,6 +153,8 @@ const Navigation = () => {
           onClick={toggleMobileMenu}
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-navigation-menu"
+          type="button"
           style={{
             background: isDarkMode ? themeColors.colors.dark[800] : themeColors.colors.white,
             border: `1px solid ${themeColors.colors.pink[200]}`,
@@ -179,7 +188,10 @@ const Navigation = () => {
       </div>
 
       {/* Mobile Navigation Menu */}
-      <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}
+      <div
+        id="mobile-navigation-menu"
+        className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}
+        aria-hidden={!isMobileMenuOpen}
         style={{
           position: 'absolute',
           top: '100%',
@@ -205,6 +217,9 @@ const Navigation = () => {
             key={tab.id}
             onClick={() => scrollToSection(tab.id)}
             className={`mobile-nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+            tabIndex={isMobileMenuOpen ? 0 : -1}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
+            type="button"
             style={{
               background: activeTab === tab.id
                 ? withAlpha(
@@ -231,7 +246,6 @@ const Navigation = () => {
               minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
-              outline: 'none',
               width: '100%'
             }}
             onMouseEnter={(e) => {
@@ -249,7 +263,6 @@ const Navigation = () => {
                 e.currentTarget.style.borderColor = 'transparent';
               }
             }}
-            onFocus={(e) => e.currentTarget.blur()}
             aria-label={`Navigate to ${tab.label} section`}
           >
             {tab.label}

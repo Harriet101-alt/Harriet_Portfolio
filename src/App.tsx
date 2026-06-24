@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { DarkModeProvider, useDarkMode } from './contexts/DarkModeContext'
+import { DarkModeProvider } from './contexts/DarkModeContext'
+import { useDarkMode } from './hooks/useDarkMode'
 import Navigation from './components/section/Navigation'
 import About from './components/section/About'
 import ForestBackground from './components/ui/ForestBackground'
@@ -11,6 +12,7 @@ const Projects       = lazy(() => import('./components/section/Projects'))
 const Experience     = lazy(() => import('./components/section/ExperienceSection'))
 const Skills         = lazy(() => import('./components/section/Skills'))
 const Footer         = lazy(() => import('./components/Footer'))
+const NotFound       = lazy(() => import('./pages/NotFound'))
 
 function HomePage() {
   return (
@@ -91,6 +93,7 @@ function AppContent() {
             <Routes>
               <Route path="/"        element={<HomePage />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="*"        element={<NotFound />} />
             </Routes>
           </Suspense>
         </main>
