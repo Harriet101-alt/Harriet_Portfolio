@@ -338,6 +338,5 @@ scripts/*.log
 scripts/tmp/
 scripts/.cache/
 # GitHub files
-.github/
 .gitlab/
 .vercel
