@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { DarkModeProvider } from './contexts/DarkModeContext'
-import { useDarkMode } from './hooks/useDarkMode'
 import Navigation from './components/section/Navigation'
 import About from './components/section/About'
 import ForestBackground from './components/ui/ForestBackground'
@@ -12,7 +11,6 @@ const Projects       = lazy(() => import('./components/section/Projects'))
 const Experience     = lazy(() => import('./components/section/ExperienceSection'))
 const Skills         = lazy(() => import('./components/section/Skills'))
 const Footer         = lazy(() => import('./components/Footer'))
-const NotFound       = lazy(() => import('./pages/NotFound'))
 
 function HomePage() {
   return (
@@ -27,46 +25,41 @@ function HomePage() {
       <Suspense fallback={<div className="h-screen flex items-center justify-center" />}>
         <Skills />
       </Suspense>
+      <Suspense fallback={<div className="h-64 flex items-center justify-center" />}>
+      </Suspense>
     </>
   )
 }
 
 function AppContent() {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const { isDarkMode } = useDarkMode();
 
   useEffect(() => {
     const onScroll = () => {
       const total = document.documentElement.scrollHeight - window.innerHeight;
       const depth = total > 0 ? window.scrollY / total : 0;
-      // Lighter overlay — forest shows through more vividly
       let opacity: number;
       if (depth <= 0.5) {
-        opacity = 0.18 + (depth / 0.5) * (0.28 - 0.18);
+        opacity = 0.58 + (depth / 0.5) * (0.66 - 0.58);
       } else {
-        opacity = 0.28 + ((depth - 0.5) / 0.5) * (0.38 - 0.28);
+        opacity = 0.66 + ((depth - 0.5) / 0.5) * (0.74 - 0.66);
       }
       if (overlayRef.current) {
-        if (isDarkMode) {
-          // Dark overlay: lets the dark forest show through while keeping text legible
-          overlayRef.current.style.background = `rgba(0, 0, 0, ${(opacity * 0.55).toFixed(3)})`;
-        } else {
-          overlayRef.current.style.background = `rgba(255, 255, 255, ${opacity.toFixed(3)})`;
-        }
+        overlayRef.current.style.background = `rgba(245, 240, 232, ${opacity.toFixed(3)})`;
       }
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, [isDarkMode]);
+  }, []);
 
   return (
     <div className="relative">
-      {/* Layer 0–9: SVG illustrated forest — never captures pointer events */}
+      {/* Layer 0–9: gamified forest world — never captures pointer events */}
       <ForestBackground />
 
-      {/* Reading overlay — switches between warm-white (light) and dark (dark mode) */}
+      {/* Reading overlay — parchment wash for black text legibility */}
       <div
         ref={overlayRef}
         aria-hidden="true"
@@ -74,7 +67,7 @@ function AppContent() {
           position: 'fixed',
           inset: 0,
           zIndex: 10,
-          background: isDarkMode ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.18)',
+          background: 'rgba(245, 240, 232, 0.58)',
           pointerEvents: 'none',
         }}
       />
@@ -93,7 +86,6 @@ function AppContent() {
             <Routes>
               <Route path="/"        element={<HomePage />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="*"        element={<NotFound />} />
             </Routes>
           </Suspense>
         </main>

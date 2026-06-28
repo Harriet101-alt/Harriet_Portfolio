@@ -297,9 +297,13 @@ interface PageLayerProps {
   content: React.ReactNode;
   pageNumber: number;
   side: 'left' | 'right';
-  variant: 'static' | 'outgoing' | 'incoming';
+  // 'static'   → a flat, non-rotating sheet (the resting page, or the
+  //              destination page revealed flat beneath a lifting sheet).
+  // 'lifting'  → the single sheet that rotates about the spine for this turn.
+  variant: 'static' | 'lifting';
   direction?: Direction;
   showCastShadow?: boolean;
+  reduceMotion?: boolean;
 }
 
 // ── Spiral wire binding SVG ───────────────────────────────────────────────────
@@ -332,38 +336,48 @@ function SpiralBinding({ bookHeight, topPad, botPad }: { bookHeight: number; top
   );
 }
 
-function PageLayer({ content, pageNumber, side, variant, direction, showCastShadow }: PageLayerProps) {
+function PageLayer({ content, pageNumber, side, variant, direction, showCastShadow, reduceMotion }: PageLayerProps) {
   const isLeft = side === 'left';
-  const transformOrigin = direction === 'forward' ? 'left center' : direction === 'back' ? 'right center' : 'center';
+
+  // The hinge is ALWAYS the spine (gutter edge of this slot): the lifting
+  // sheet pivots there, the free outer edge leads the motion. A flat static
+  // sheet never rotates, so its origin is irrelevant (kept centred).
+  const transformOrigin =
+    variant === 'lifting'
+      ? direction === 'forward'
+        ? 'left center'
+        : 'right center'
+      : 'center';
 
   let turnAnimation: string | undefined;
   let curveAnimation: string | undefined;
 
-  if (variant === 'outgoing' && direction === 'forward') {
-    turnAnimation = `pageTurnForward ${TURN_DURATION}ms ${TURN_EASING} both`;
-    curveAnimation = `curveShadingForward ${TURN_DURATION}ms ${TURN_EASING} both`;
-  } else if (variant === 'outgoing' && direction === 'back') {
-    turnAnimation = `pageTurnBackward ${TURN_DURATION}ms ${TURN_EASING} both`;
-    curveAnimation = `curveShadingBackward ${TURN_DURATION}ms ${TURN_EASING} both`;
-  } else if (variant === 'incoming' && direction === 'forward') {
-    turnAnimation = `pageLandForward ${LAND_DURATION}ms ${TURN_EASING} ${LAND_DELAY}ms both`;
-  } else if (variant === 'incoming' && direction === 'back') {
-    turnAnimation = `pageLandBackward ${LAND_DURATION}ms ${TURN_EASING} ${LAND_DELAY}ms both`;
+  if (variant === 'lifting' && !reduceMotion) {
+    const turnName = direction === 'forward' ? 'pageTurnForward' : 'pageTurnBackward';
+    const curveName = direction === 'forward' ? 'curveShadingForward' : 'curveShadingBackward';
+    turnAnimation = `${turnName} ${TURN_DURATION}ms ${TURN_EASING} both`;
+    curveAnimation = `${curveName} ${TURN_DURATION}ms ${TURN_EASING} both`;
   }
 
   return (
     <div
       style={{
         ...styles.pageContainer,
-        ...(variant === 'incoming' ? styles.pageContainerOverlay : null),
+        // The lifting sheet is an absolute overlay so it can rotate above the
+        // flat destination sheet revealed beneath it. Crucially this is now
+        // contained by its own half-width slot (pageSlot), so inset:0 and the
+        // transform-origin resolve to the slot's gutter — NOT the whole book.
+        ...(variant === 'lifting' ? styles.pageContainerOverlay : null),
         transformOrigin,
         animation: turnAnimation,
+        // Only the lifting sheet sits above the static underlay during a turn.
+        zIndex: variant === 'lifting' ? 8 : 'auto',
       }}
     >
       <div
         style={{
           ...styles.pageShadowReceiver,
-          animation: showCastShadow ? `castShadow ${TURN_DURATION}ms ease both` : undefined,
+          animation: showCastShadow && !reduceMotion ? `castShadow ${TURN_DURATION}ms ease both` : undefined,
         }}
       />
       <div style={styles.pageBack} />
@@ -383,9 +397,12 @@ function PageLayer({ content, pageNumber, side, variant, direction, showCastShad
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 
-const TURN_DURATION = 700;
-const LAND_DURATION = 400;
-const LAND_DELAY = 300;
+// A full turn is ONE sheet rotating 0 → ±180° about the spine. The keyframe
+// %-steps below are deliberately non-uniform: the sheet accelerates as it
+// passes vertical (gravity helping it over the top) and decelerates as the
+// free edge settles onto the opposite stack. The JS swap fires at exactly
+// TURN_DURATION so the static spread takes over the instant the rotation ends.
+const TURN_DURATION = 750;
 const TURN_EASING = 'cubic-bezier(0.645, 0.045, 0.355, 1.000)';
 
 export default function FlipJournal() {
@@ -396,9 +413,18 @@ export default function FlipJournal() {
   const [dismissedForward, setDismissedForward] = useState(false);
   const [dismissedBack, setDismissedBack] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const spreads = getSpreads();
   const total = spreads.length;
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduceMotion(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -421,11 +447,18 @@ export default function FlipJournal() {
     setFlip({ direction, fromSpread: currentSpread, toSpread });
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Reduced motion: skip the rotation, commit the new spread immediately
+    // so the end state is correct without any oscillating motion.
     timeoutRef.current = setTimeout(() => {
       setCurrentSpread(toSpread);
       setFlip(null);
-    }, TURN_DURATION);
+    }, reduceMotion ? 0 : TURN_DURATION);
   }
+
+  // Clean up any pending swap timer on unmount.
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
 
   const spread = spreads[currentSpread];
   const outgoingSpread = flip ? spreads[flip.fromSpread] : null;
@@ -448,33 +481,43 @@ export default function FlipJournal() {
       <div style={styles.bookFrame}>
       <div style={styles.book}>
 
-        {/* Left page */}
-        {isTurningLeft && flip && outgoingSpread && incomingSpread ? (
-          <>
+        {/* ── LEFT SLOT ──────────────────────────────────────────────────
+            A back turn lifts the LEFT sheet: the destination left page sits
+            flat beneath, the current left page rides the single rotating
+            sheet that pivots on the spine (right edge of this slot) and
+            sweeps left→right onto the right side. Every other case the left
+            page is a single flat, static sheet. */}
+        <div style={styles.pageSlot}>
+          {isTurningLeft && flip && outgoingSpread && incomingSpread ? (
+            <>
+              {/* Destination page, revealed flat beneath the lifting sheet */}
+              <PageLayer
+                content={incomingSpread.left}
+                pageNumber={flip.toSpread * 2 + 1}
+                side="left"
+                variant="static"
+              />
+              {/* The one sheet that actually rotates this turn */}
+              <PageLayer
+                content={outgoingSpread.left}
+                pageNumber={flip.fromSpread * 2 + 1}
+                side="left"
+                variant="lifting"
+                direction={flip.direction}
+                reduceMotion={reduceMotion}
+              />
+            </>
+          ) : (
             <PageLayer
-              content={outgoingSpread.left}
-              pageNumber={flip.fromSpread * 2 + 1}
+              content={spread.left}
+              pageNumber={currentSpread * 2 + 1}
               side="left"
-              variant="outgoing"
-              direction={flip.direction}
+              variant="static"
+              showCastShadow={isTurningRight}
+              reduceMotion={reduceMotion}
             />
-            <PageLayer
-              content={incomingSpread.left}
-              pageNumber={flip.toSpread * 2 + 1}
-              side="left"
-              variant="incoming"
-              direction={flip.direction}
-            />
-          </>
-        ) : (
-          <PageLayer
-            content={spread.left}
-            pageNumber={currentSpread * 2 + 1}
-            side="left"
-            variant="static"
-            showCastShadow={isTurningRight}
-          />
-        )}
+          )}
+        </div>
 
         {/* Spiral binding — absolutely positioned SVG overlay */}
         <SpiralBinding bookHeight={736} topPad={56} botPad={56} />
@@ -482,33 +525,43 @@ export default function FlipJournal() {
         {/* Spine spacer — keeps flex layout gap between pages */}
         <div style={styles.spine} />
 
-        {/* Right page */}
-        {isTurningRight && flip && outgoingSpread && incomingSpread ? (
-          <>
+        {/* ── RIGHT SLOT ─────────────────────────────────────────────────
+            A forward turn lifts the RIGHT sheet: the destination right page
+            sits flat beneath, the current right page rides the single
+            rotating sheet that pivots on the spine (left edge of this slot)
+            and sweeps right→left onto the left side. Every other case the
+            right page is a single flat, static sheet. */}
+        <div style={styles.pageSlot}>
+          {isTurningRight && flip && outgoingSpread && incomingSpread ? (
+            <>
+              {/* Destination page, revealed flat beneath the lifting sheet */}
+              <PageLayer
+                content={incomingSpread.right}
+                pageNumber={flip.toSpread * 2 + 2}
+                side="right"
+                variant="static"
+              />
+              {/* The one sheet that actually rotates this turn */}
+              <PageLayer
+                content={outgoingSpread.right}
+                pageNumber={flip.fromSpread * 2 + 2}
+                side="right"
+                variant="lifting"
+                direction={flip.direction}
+                reduceMotion={reduceMotion}
+              />
+            </>
+          ) : (
             <PageLayer
-              content={outgoingSpread.right}
-              pageNumber={flip.fromSpread * 2 + 2}
+              content={spread.right}
+              pageNumber={currentSpread * 2 + 2}
               side="right"
-              variant="outgoing"
-              direction={flip.direction}
+              variant="static"
+              showCastShadow={isTurningLeft}
+              reduceMotion={reduceMotion}
             />
-            <PageLayer
-              content={incomingSpread.right}
-              pageNumber={flip.toSpread * 2 + 2}
-              side="right"
-              variant="incoming"
-              direction={flip.direction}
-            />
-          </>
-        ) : (
-          <PageLayer
-            content={spread.right}
-            pageNumber={currentSpread * 2 + 2}
-            side="right"
-            variant="static"
-            showCastShadow={isTurningLeft}
-          />
-        )}
+          )}
+        </div>
       </div>
 
       {/* Corner touch zones — sit outside book's 3D/perspective context so
@@ -600,7 +653,7 @@ export default function FlipJournal() {
               style={{ strokeDasharray: 80, strokeDashoffset: 0 }}
             />
           </svg>
-          <div style={{ fontFamily: '"Caveat", cursive', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(3deg)', transformOrigin: 'right top' }}>
+          <div style={{ fontFamily: '"DK Crayonista", "Courier Prime", "Courier New", monospace', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(3deg)', transformOrigin: 'right top' }}>
             {'Turn Me'.split('').map((ch, i) => (
               <span key={i} style={{ display: 'inline-block', opacity: 0, animation: `journalWriteChar 0.08s ease-out ${i * 45}ms both` }}>
                 {ch === ' ' ? '\u00A0' : ch}
@@ -642,7 +695,7 @@ export default function FlipJournal() {
               style={{ strokeDasharray: 80, strokeDashoffset: 0 }}
             />
           </svg>
-          <div style={{ fontFamily: '"Caveat", cursive', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(-3deg)', transformOrigin: 'left top' }}>
+          <div style={{ fontFamily: '"DK Crayonista", "Courier Prime", "Courier New", monospace', fontSize: '18px', color: TURN_ME_GREEN, lineHeight: 1.2, transform: 'rotate(-3deg)', transformOrigin: 'left top' }}>
             {'Go backwards'.split('').map((ch, i) => (
               <span key={i} style={{ display: 'inline-block', opacity: 0, animation: `journalWriteChar 0.08s ease-out ${i * 45}ms both` }}>
                 {ch === ' ' ? '\u00A0' : ch}
@@ -696,7 +749,6 @@ export default function FlipJournal() {
 
       {/* Keyframes injected via style tag */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
         @keyframes journalWriteChar {
           from { opacity: 0; transform: translateY(3px) scale(0.7) rotate(-6deg); }
           to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
@@ -857,12 +909,23 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ── Page anatomy (shadow-receiver / back / front / curve-shadow) ──
 
-  pageContainer: {
+  // A half-width slot. Both the flat resting sheet and any lifting sheet for
+  // this side live INSIDE this slot, so their inset/transform-origin resolve
+  // to the slot's own gutter — not the whole book. This is what guarantees
+  // a single sheet turns about the spine rather than the book folding.
+  pageSlot: {
     position: 'relative',
+    flex: 1,
+    height: '100%',
+    transformStyle: 'preserve-3d',
+  },
+
+  pageContainer: {
+    position: 'absolute',
+    inset: 0,
     transformStyle: 'preserve-3d',
     width: '100%',
     height: '100%',
-    flex: 1,
   },
 
   pageContainerOverlay: {

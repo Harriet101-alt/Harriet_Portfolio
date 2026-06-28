@@ -1,3 +1,4 @@
+
 # PORTFOLIO_CONTEXT.md
 
 > Shared context for all Copilot agents working on this repository.
@@ -137,6 +138,7 @@ Structural layers: background world (z 0) → scroll-driven reading overlay (z 1
 | `HeroGlobe.tsx` | WebGL globe (`globe.gl`) with clickable `WAYPOINTS`, fly-to, compact "sticker" mode | Heavy dependency. Has `compact` prop. Don't break the `ResizeObserver` sizing or the `_destructor` cleanup. |
 | `ExpeditionMap.tsx` | ⚠️ Custom SVG route map — pins + self-drawing dashed trail + walking explorer | **FRAGILE.** See §7. Geometry, not styling. |
 | `FlipJournal.tsx` | "Field Notes" flip-book telling the career story (Ecology → MSc → Dev → Hackathon) | Content lives in `getSpreads()`. Shares the cartographic palette + stamps. |
+| `ui/lanyard.tsx` | Swinging conference ID badge in the About section | Hardcoded badge interaction: the profile photo cycles through `profile1`, `profile2`, and `profile3` (`Profile1.png`, `Profile3.JPG`, `Profile4.JPG`) when clicked. Keep the hand-drawn curved "click here" arrow affordance unless explicitly removed. |
 | `AsciiMorphText.tsx` | Hero text where letters drop on strings like marionettes | ⚠️ Hardcodes `color: '#000'` and `fontFamily: 'monospace'` — does **not** adapt to dark mode. Cleanup candidate. |
 | `ImageCarousel.tsx` | Project screenshot carousel + enlarge modal | Pink focus rings; uses `themeColors`. |
 | `DarkModeToggle.tsx` | Sun/Moon theme switch | Uses **direct** `colors` import (not the hook). |

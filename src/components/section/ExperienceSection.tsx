@@ -12,9 +12,9 @@ import { portfolioProjects, type PortfolioProject } from '../../data/projects';
 // own light/dark background or text colours (those still come from
 // useThemeColors, same as every other section).
 
-const PUNK_PINK = '#FF1F7D';
-const ACID_GREEN = '#AAFF00';
-const BRUISE = '#3D1A5E';
+const PUNK_PINK = '#EC4999';
+const FOREST_SAGE = '#3a5c3a';
+const MAP_BROWN = '#8a6240';
 const BLUSH = '#FFD6E8';
 
 // Reuse the same "expedition" tones already established in FlipJournal/ExpeditionMap
@@ -27,7 +27,7 @@ const FONT_MONO = '"Courier Prime", "Courier New", monospace';
 const FONT_DISPLAY = '"Playfair Display", Georgia, serif';
 
 const EASE_RESISTANCE = 'cubic-bezier(0.65, 0, 0.35, 1)';
-const FOREST_GREEN = '#2D6A4F';
+const FOREST_GREEN = FOREST_SAGE;
 
 // ─── CONTENT ─────────────────────────────────────────────────────────────────
 
@@ -176,7 +176,7 @@ function HackathonPill({ label, rotation }: { label: string; rotation: number })
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          background: ACID_GREEN,
+          background: FOREST_SAGE,
           marginRight: '6px',
           verticalAlign: 'middle',
         }}
@@ -198,9 +198,9 @@ function CategoryPill({ label, rotation }: { label: string; rotation: number }) 
         textTransform: 'uppercase',
         padding: '4px 11px',
         borderRadius: '999px',
-        border: `1.5px solid ${BRUISE}`,
-        color: BRUISE,
-        background: withAlpha(BRUISE, 0.05),
+        border: `1.5px solid ${MAP_BROWN}`,
+        color: MAP_BROWN,
+        background: withAlpha(MAP_BROWN, 0.05),
         transform: `rotate(${rotation}deg)`,
         whiteSpace: 'nowrap',
       }}
@@ -243,7 +243,7 @@ function ClickHintSticker({ animate }: { animate: boolean }) {
     >
       <div
         style={{
-          fontFamily: '"Caveat", cursive',
+          fontFamily: '"DK Crayonista", "Courier Prime", "Courier New", monospace',
           fontSize: '15px',
           color: FOREST_GREEN,
           lineHeight: 1.3,
@@ -421,8 +421,8 @@ export default function ExperienceSection() {
 
   const stars = isDarkMode ? darkStars : lightStars;
   const cardBg = isDarkMode ? withAlpha(themeColors.colors.dark[800], 0.85) : withAlpha(themeColors.colors.white, 0.9);
-  const cardBorder = isDarkMode ? withAlpha(BRUISE, 0.5) : themeColors.colors.pink[200];
-  const cardHoverBg = isDarkMode ? withAlpha(BRUISE, 0.3) : BLUSH;
+  const cardBorder = isDarkMode ? withAlpha(MAP_BROWN, 0.5) : themeColors.colors.pink[200];
+  const cardHoverBg = isDarkMode ? withAlpha(MAP_BROWN, 0.18) : BLUSH;
 
   return (
     <section

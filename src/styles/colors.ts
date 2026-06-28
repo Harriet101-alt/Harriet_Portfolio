@@ -26,6 +26,13 @@ export const colors = {
     900: '#6B4C57',       // Darkest pink
   },
 
+  punk: {
+    hotPink: '#EC4999',
+    lipstick: '#FF1F7D',
+    blush: '#FFD6E8',
+    ribbon: '#FDD5DF',
+  },
+
   // Dark theme colors
   dark: {
     50: '#F8FAFC',        // Almost white
@@ -44,11 +51,11 @@ export const colors = {
   // Semantic colors
   background: {
     light: {
-      primary: '#FFFFFF',
+      primary: '#f5f0e8',
       secondary: '#FFF5F7',
       gradient: 'transparent',
       gradientEnd: 'transparent', // transparent — forest shows through
-      overlay: 'rgba(255, 255, 255, 0.5)',
+      overlay: 'rgba(245, 240, 232, 0.66)',
       // Section-specific gradients - mostly white with very light pink brush at edges
       sections: {
         about: 'transparent',
@@ -59,11 +66,11 @@ export const colors = {
       },
     },
     dark: {
-      primary: '#0F172A',
-      secondary: '#1E293B',
+      primary: '#f5f0e8',
+      secondary: '#ede9e2',
       gradient: 'transparent',
       gradientEnd: 'transparent', // transparent — forest shows through section transitions
-      overlay: 'rgba(0, 0, 0, 0.7)',
+      overlay: 'rgba(245, 240, 232, 0.72)',
       // Dark mode sections: transparent so the forest background shows through
       sections: {
         about: 'transparent',
@@ -78,18 +85,18 @@ export const colors = {
   // Text colors
   text: {
     light: {
-      primary: '#1F2937',     // rgb(31, 41, 55)
-      secondary: '#4B5563',   // rgb(75, 85, 99)
-      tertiary: '#6B7280',    // rgb(107, 114, 128)
-      accent: '#8B5A65',      // Pink text
-      pink: '#BE185D',        // rgb(190, 24, 93)
+      primary: '#000000',
+      secondary: '#000000',
+      tertiary: '#000000',
+      accent: '#8B2E1A',
+      pink: '#EC4999',
     },
     dark: {
-      primary: '#FFFFFF',
-      secondary: '#FDD5DF',
-      tertiary: '#EABEC3',
-      accent: '#D9A5AC',
-      pink: '#EABEC3',
+      primary: '#000000',
+      secondary: '#000000',
+      tertiary: '#000000',
+      accent: '#8B2E1A',
+      pink: '#EC4999',
     },
   },
 
@@ -112,8 +119,8 @@ export const colors = {
   // Navigation specific
   navigation: {
     light: {
-      background: 'rgba(255, 232, 239, 0.4)',
-      backgroundScrolled: 'rgba(255, 232, 239, 0.6)',
+      background: 'rgba(245, 240, 232, 0.72)',
+      backgroundScrolled: 'rgba(245, 240, 232, 0.88)',
       border: 'rgba(255, 194, 209, 0.15)',
       borderScrolled: 'rgba(255, 194, 209, 0.2)',
       shadow: 'rgba(255, 194, 209, 0.08)',
@@ -121,13 +128,13 @@ export const colors = {
       mobile: 'rgba(254, 248, 250, 0.95)',
     },
     dark: {
-      background: 'rgba(10, 15, 27, 0.4)',
-      backgroundScrolled: 'rgba(10, 15, 27, 0.6)',
-      border: 'rgba(234, 190, 195, 0.1)',
-      borderScrolled: 'rgba(234, 190, 195, 0.15)',
-      shadow: 'rgba(0, 0, 0, 0.2)',
-      shadowScrolled: 'rgba(0, 0, 0, 0.3)',
-      mobile: 'rgba(10, 15, 27, 0.95)',
+      background: 'rgba(245, 240, 232, 0.72)',
+      backgroundScrolled: 'rgba(245, 240, 232, 0.88)',
+      border: 'rgba(236, 73, 153, 0.12)',
+      borderScrolled: 'rgba(236, 73, 153, 0.18)',
+      shadow: 'rgba(42, 31, 20, 0.12)',
+      shadowScrolled: 'rgba(42, 31, 20, 0.18)',
+      mobile: 'rgba(245, 240, 232, 0.95)',
     },
   },
 
@@ -136,29 +143,29 @@ export const colors = {
     primary: {
       light: {
         background: '#EABEC3',
-        text: '#FFFFFF',
-        hover: '#D9A5AC',
-        shadow: 'rgba(234, 190, 195, 0.3)',
+        text: '#000000',
+        hover: '#EC4999',
+        shadow: 'rgba(236, 73, 153, 0.28)',
       },
       dark: {
         background: '#EABEC3',
-        text: '#0A0F1B',
-        hover: '#FDD5DF',
-        shadow: 'rgba(234, 190, 195, 0.4)',
+        text: '#000000',
+        hover: '#EC4999',
+        shadow: 'rgba(236, 73, 153, 0.28)',
       },
     },
     secondary: {
       light: {
-        background: 'rgba(255, 255, 255, 0.8)',
-        text: '#1F2937',
+        background: 'rgba(245, 240, 232, 0.9)',
+        text: '#000000',
         border: '#EABEC3',
         hover: '#FAE8ED',
       },
       dark: {
-        background: 'rgba(31, 41, 55, 0.9)',
-        text: '#FFFFFF',
-        border: '#374151',
-        hover: 'rgba(234, 190, 195, 0.1)',
+        background: 'rgba(245, 240, 232, 0.9)',
+        text: '#000000',
+        border: '#EABEC3',
+        hover: '#FAE8ED',
       },
     },
     outline: {
@@ -169,10 +176,10 @@ export const colors = {
         hover: '#FAE8ED',
       },
       dark: {
-        background: '#1F2937',
-        text: '#EABEC3',
-        border: '#D9A5AC',
-        hover: 'rgba(234, 190, 195, 0.1)',
+        background: 'transparent',
+        text: '#8B2E1A',
+        border: '#EABEC3',
+        hover: '#FAE8ED',
       },
     },
   },
@@ -180,14 +187,14 @@ export const colors = {
   // Card colors
   card: {
     light: {
-      background: '#FFFFFF',
+      background: '#f5f0e8',
       border: 'rgba(234, 190, 195, 0.3)',
-      shadow: 'rgba(0, 0, 0, 0.1)',
+      shadow: 'rgba(42, 31, 20, 0.12)',
     },
     dark: {
-      background: '#1F2937',
-      border: 'rgba(55, 65, 81, 0.3)',
-      shadow: 'rgba(0, 0, 0, 0.3)',
+      background: '#f5f0e8',
+      border: 'rgba(234, 190, 195, 0.35)',
+      shadow: 'rgba(42, 31, 20, 0.18)',
     },
   },
 
@@ -206,6 +213,28 @@ export const colors = {
     error: '#EF4444',
     info: '#3B82F6',
     neutral: '#6B7280',
+  },
+
+  // Cartographic expedition tokens
+  expedition: {
+    paper: '#f5f0e8',
+    paperWarm: '#ede9e2',
+    ink: '#2a1f14',
+    inkLight: '#6b5744',
+    inkFaint: '#a08878',
+    pencil: '#8a8070',
+    stampRed: '#8b2e1a',
+    stampGreen: '#3a5c3a',
+    mapBlue: '#2d5986',
+    coverBorderEnd: '#b8845a',
+  },
+
+  typography: {
+    fonts: {
+      display: '"Playfair Display", Georgia, serif',
+      body: '"Lora", Georgia, serif',
+      mono: '"Courier Prime", "Courier New", monospace',
+    },
   },
 
   // Special colors

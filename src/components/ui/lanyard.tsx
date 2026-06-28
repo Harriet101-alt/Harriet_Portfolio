@@ -10,55 +10,73 @@ import { profile1, profile2, profile3 } from '../../assets';
 const SANS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
 const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
 
-const ANCHOR_SIZE = 10;
-const STRAP_WIDTH = 18;
-const STRAP_LENGTH = 140;
-const CLIP_WIDTH = 36;
-const CLIP_HEIGHT = 14;
-const CARD_WIDTH = 280;
-const CARD_HEIGHT = 340;
-const CONTAINER_WIDTH = CARD_WIDTH + 80;
+// Overall badge size multiplier — scales the card, clip, photo and text
+// together. Bump this single number to resize the whole badge.
+const SCALE = 1.25;
+const px = (n: number) => Math.round(n * SCALE);
 
-const MAX_ROTATION = 35;
+const ANCHOR_SIZE = px(10);
+const STRAP_WIDTH = px(18);
+const STRAP_LENGTH = 180;          // strap drop length — tuned independently of SCALE (how far it falls)
+const CLIP_WIDTH = px(36);
+const CLIP_HEIGHT = px(14);
+const CARD_WIDTH = px(250);
+const CARD_HEIGHT = px(340);
+const CARD_PADDING = px(12);
+const PHOTO_WIDTH = CARD_WIDTH - CARD_PADDING * 2;
+const PHOTO_HEIGHT = px(185);
+const CONTAINER_WIDTH = CARD_WIDTH + px(48);   // keeps the badge centred within the 380px collage column
+
+const MAX_ROTATION = 20;
 const DRAG_ROTATION_FACTOR = 0.3;
 const PROXIMITY_RADIUS = 160;
 const PROXIMITY_MAX_ROTATION = 10;
-const SCROLL_SWING_AMPLITUDE = 8;
+const SCROLL_SWING_AMPLITUDE = 20;
+const SCROLL_SWING_BACK = 8;   // ← one value, used both ways
+const SCROLL_SETTLE_DELAY = 260;
 
 const springConfig = { tension: 280, friction: 28, mass: 1 };
+
+const profilePhotos = [
+  { src: profile1, alt: 'Harriet Fletcher profile photo 1' },
+  { src: profile2, alt: 'Harriet Fletcher profile photo 2' },
+  { src: profile3, alt: 'Harriet Fletcher profile photo 4' },
+];
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void }) {
+export default function Lanyard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const hasSettledRef = useRef<boolean>(false);
-  const lastScrollYRef = useRef<number>(typeof window !== 'undefined' ? window.scrollY : 0);
-
-  const PHOTOS = [profile1, profile2, profile3];
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [profilePhotoIndex, setProfilePhotoIndex] = useState(0);
 
   // y: vertical drop offset (starts -180 = above rest position)
-  // rotation: pendulum swing angle — starts at 0, no initial tilt
+  // rotation: pendulum swing angle
   const [{ rotation, y }, api] = useSpring(() => ({
-    rotation: 0,
+    rotation: -8,
     y: -180,
     config: springConfig,
   }));
 
-  // On mount: drop into place, then gentle left-first symmetric pendulum
+  // On mount: drop into place, then run damped pendulum decay sequence
   useEffect(() => {
     api.start({
       to: async (next) => {
-        // Phase 1 — fall under gravity
-        await next({ y: 0, config: { tension: 210, friction: 16, mass: 1.4 } });
-        // Phase 2 — gentle symmetric decay: left first so both sides are equally visible
-        await next({ rotation: -4, config: { tension: 180, friction: 16 } });
-        await next({ rotation:  3, config: { tension: 185, friction: 18 } });
-        await next({ rotation: -1, config: { tension: 190, friction: 22 } });
-        await next({ rotation:  0, config: { tension: 200, friction: 26 } });
+        // Phase 1 — fall under gravity, slight bounce on catch
+        await next({ y: 0, config: { tension: 210, friction: 14, mass: 1.5 } });
+        // Phase 2 — damped pendulum: each peak ~70% of the last, alternating sides
+        await next({ rotation: 24,  config: { tension: 170, friction: 11 } });
+        await next({ rotation: -17, config: { tension: 170, friction: 12 } });
+        await next({ rotation: 11,  config: { tension: 175, friction: 14 } });
+        await next({ rotation: -7,  config: { tension: 180, friction: 16 } });
+        await next({ rotation: 4,   config: { tension: 185, friction: 18 } });
+        await next({ rotation: -2,  config: { tension: 190, friction: 20 } });
+        await next({ rotation: 0,   config: { tension: 200, friction: 24 } });
+        // Gate all interactive swings behind this flag
         hasSettledRef.current = true;
       },
     });
@@ -76,31 +94,29 @@ export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void })
     }
   });
 
-  // Scroll-triggered pendulum swing — direction matches scroll direction
+  // Scroll-triggered pendulum swing — only fires after initial sequence settles
   useEffect(() => {
     const handleScroll = () => {
       if (isDraggingRef.current || !hasSettledRef.current) return;
+      scrollTimerRef.current.forEach(clearTimeout);
+      scrollTimerRef.current = [];
 
-      const currentY = window.scrollY;
-      // 1 = scrolling down → swing right (positive), -1 = up → swing left (negative)
-      const dir = currentY > lastScrollYRef.current ? 1 : -1;
-      lastScrollYRef.current = currentY;
-
-      api.start({
-        to: async (next) => {
-          // First arc: swing in the scroll direction
-          await next({ rotation:  dir * SCROLL_SWING_AMPLITUDE,       config: { tension: 200, friction: 14 } });
-          // Return arc: small swing back the other way (decaying pendulum feel)
-          await next({ rotation: -dir * SCROLL_SWING_AMPLITUDE * 0.4, config: { tension: 200, friction: 18 } });
-          // Settle to centre
-          await next({ rotation:  0,                                   config: { tension: 220, friction: 24 } });
-        },
-      });
+      api.start({ rotation: -SCROLL_SWING_AMPLITUDE });
+      scrollTimerRef.current.push(setTimeout(() => {
+        api.start({ rotation: SCROLL_SWING_AMPLITUDE });
+      }, 90));
+      scrollTimerRef.current.push(setTimeout(() => {
+        api.start({ rotation: SCROLL_SWING_BACK });
+      }, 180));
+      scrollTimerRef.current.push(setTimeout(() => {
+        api.start({ rotation: 0 });
+      }, SCROLL_SETTLE_DELAY));
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      scrollTimerRef.current.forEach(clearTimeout);
     };
   }, [api]);
 
@@ -132,6 +148,12 @@ export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void })
     if (isDraggingRef.current || !hasSettledRef.current) return;
     api.start({ rotation: 0 });
   }, [api]);
+
+  const handleProfileClick = useCallback(() => {
+    setProfilePhotoIndex((currentIndex) => (currentIndex + 1) % profilePhotos.length);
+  }, []);
+
+  const currentProfilePhoto = profilePhotos[profilePhotoIndex];
 
   return (
     <div
@@ -200,7 +222,7 @@ export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void })
               width: `${CLIP_WIDTH}px`,
               height: `${CLIP_HEIGHT}px`,
               margin: '0 auto',
-              borderRadius: '7px',
+              borderRadius: `${px(7)}px`,
               background: '#D0D0D0',
               boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15)',
               position: 'relative',
@@ -212,9 +234,9 @@ export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void })
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: '18px',
-                height: '5px',
-                borderRadius: '3px',
+                width: `${px(18)}px`,
+                height: `${px(5)}px`,
+                borderRadius: `${px(3)}px`,
                 background: '#B0B0B0',
               }}
             />
@@ -225,67 +247,112 @@ export default function Lanyard({ onPhotoClick }: { onPhotoClick?: () => void })
             style={{
               width: `${CARD_WIDTH}px`,
               minHeight: `${CARD_HEIGHT}px`,
-              borderRadius: '20px',
+              borderRadius: `${px(20)}px`,
               background: '#FFFFFF',
               boxShadow: '0 4px 6px rgba(0,0,0,0.04), 0 10px 40px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06)',
-              padding: '12px',
+              padding: `${CARD_PADDING}px`,
               display: 'flex',
               flexDirection: 'column',
+              position: 'relative',
             }}
           >
-            {/* Photo — click to cycle through profile photos */}
-            <img
-              src={PHOTOS[photoIndex]}
-              alt="Click to see more photos"
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                setPhotoIndex((i) => (i + 1) % PHOTOS.length);
-                onPhotoClick?.();
-                // Small bounce swing on click for tactile feedback
-                if (hasSettledRef.current && !isDraggingRef.current) {
-                  api.start({
-                    to: async (next) => {
-                      await next({ rotation:  3, config: { tension: 260, friction: 16 } });
-                      await next({ rotation: -2, config: { tension: 260, friction: 20 } });
-                      await next({ rotation:  0, config: { tension: 280, friction: 26 } });
-                    },
-                  });
-                }
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+            <div
+              aria-hidden="true"
               style={{
-                width: '256px',
-                height: '240px',
-                objectFit: 'cover',
-                objectPosition: 'center top',
-                borderRadius: '12px',
-                display: 'block',
-                marginBottom: '12px',
-                cursor: 'pointer',
-                transition: 'opacity 0.2s ease',
+                position: 'absolute',
+                top: `${px(-42)}px`,
+                right: `${px(-78)}px`,
+                width: `${px(118)}px`,
+                height: `${px(78)}px`,
+                color: '#000000',
+                fontFamily: '"DK Crayonista", "Comic Sans MS", cursive',
+                fontSize: `${px(18)}px`,
+                fontWeight: 900,
+                textShadow: '0 1px 0 rgba(255,255,255,0.85), 0 0 1px rgba(0,0,0,0.35)',
+                letterSpacing: '0.02em',
+                pointerEvents: 'none',
+                transform: 'rotate(-8deg)',
+                zIndex: 2,
               }}
-            />
+            >
+              <span style={{ position: 'absolute', top: 0, right: 0 }}>click here</span>
+              <svg
+                viewBox="0 0 118 78"
+                width={px(118)}
+                height={px(78)}
+                fill="none"
+                style={{ position: 'absolute', left: 0, top: px(8), overflow: 'visible' }}
+              >
+                <path
+                  d="M105 15 C70 20 76 58 35 55"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray="5 7"
+                />
+                <path
+                  d="M39 47 L25 56 L41 65"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+
+            {/* Photo */}
+            <button
+              type="button"
+              aria-label="Change lanyard profile photo"
+              onClick={handleProfileClick}
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{
+                appearance: 'none',
+                border: 0,
+                background: 'transparent',
+                padding: 0,
+                width: `${PHOTO_WIDTH}px`,
+                height: `${PHOTO_HEIGHT}px`,
+                borderRadius: `${px(12)}px`,
+                display: 'block',
+                marginBottom: `${px(12)}px`,
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
+            >
+              <img
+                src={currentProfilePhoto.src}
+                alt={currentProfilePhoto.alt}
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'center top',
+                  display: 'block',
+                  pointerEvents: 'none',
+                }}
+              />
+            </button>
 
             {/* Name */}
-            <span style={{ fontFamily: SANS_FONT, fontSize: '18px', fontWeight: 600, color: '#1A1A1A', margin: '0 4px 2px', display: 'block' }}>
+            <span style={{ fontFamily: SANS_FONT, fontSize: `${px(18)}px`, fontWeight: 600, color: '#1A1A1A', margin: `0 ${px(4)}px ${px(2)}px`, display: 'block' }}>
               Harriet Fletcher
             </span>
 
             {/* Role */}
-            <span style={{ fontFamily: SANS_FONT, fontSize: '14px', fontWeight: 400, color: '#6B6B6B', margin: '0 4px 8px', display: 'block' }}>
+            <span style={{ fontFamily: SANS_FONT, fontSize: `${px(14)}px`, fontWeight: 400, color: '#6B6B6B', margin: `0 ${px(4)}px ${px(8)}px`, display: 'block' }}>
               Junior Developer
             </span>
 
             {/* Divider */}
-            <div style={{ borderTop: '1.5px dashed #E0E0E0', width: '100%', marginBottom: '8px' }} />
+            <div style={{ borderTop: '1.5px dashed #E0E0E0', width: '100%', marginBottom: `${px(8)}px` }} />
 
             {/* Footer row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
-              <span style={{ fontFamily: SANS_FONT, fontSize: '13px', fontWeight: 500, color: '#9B9B9B' }}>ID</span>
-              <span style={{ fontFamily: MONO_FONT, fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>ID-HF-26</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: `0 ${px(4)}px` }}>
+              <span style={{ fontFamily: SANS_FONT, fontSize: `${px(13)}px`, fontWeight: 500, color: '#9B9B9B' }}>ID</span>
+              <span style={{ fontFamily: MONO_FONT, fontSize: `${px(13)}px`, fontWeight: 700, color: '#1A1A1A' }}>ID-HF-26</span>
             </div>
           </div>
         </animated.div>

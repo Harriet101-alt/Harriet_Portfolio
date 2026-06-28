@@ -9,7 +9,6 @@ import Lanyard from '../ui/lanyard';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { useThemeColors, withAlpha } from '../../hooks/useThemeColors';
 import { profile1, profile2, profile3, stickers as stickerImages, whiteLily, liRedLily, darkRedLily, greenRocks, lakeMountain, tropics } from '../../assets';
-import type { Waypoint } from '../../data/waypoints';
 
 
 const About = () => {
@@ -18,7 +17,6 @@ const About = () => {
   const [isClosing, setIsClosing] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [nameText, setNameText] = useState('');
-  const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const collageRef = useRef<HTMLDivElement>(null);
   const [, setCollageVisible] = useState(false);
@@ -226,19 +224,25 @@ const About = () => {
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex flex-col md:flex-row justify-between items-start max-w-6xl mx-auto gap-8">
             <div className="text-left w-full md:w-auto">
-              <div className="ascii-container justify-start text-3xl md:text-4xl lg:text-5xl">
-                <span
+              <div className="ascii-container justify-start">
+                <h1
                   className={isDarkMode ? 'hero-subtitle-dark' : 'hero-subtitle-light'}
                   style={{
-                    fontFamily: 'monospace',
+                    fontFamily: '"Times New Roman", Georgia, serif',
                     fontWeight: 400,
-                    letterSpacing: '0.06em',
-                    fontSize: 'clamp(1.5rem, 5vw, 3rem)',
+                    letterSpacing: '0.04em',
+                    fontSize: 'clamp(3rem, 9vw, 6.75rem)',
+                    lineHeight: 0.9,
+                    margin: 0,
+                    color: '#000000',
+                    display: 'inline-flex',
+                    alignItems: 'baseline',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {nameText}
-                  <span className="cursor">|</span>
-                </span>
+                  <span className="cursor" style={{ marginLeft: '0.04em', lineHeight: 1 }}>|</span>
+                </h1>
               </div>
               <div className="hero-subtitle justify-start text-base md:text-lg lg:text-xl mt-2">
                 <div className="flex flex-wrap items-center justify-start">
@@ -246,26 +250,28 @@ const About = () => {
                   <TypewriterCarousel roles={roles} className={isDarkMode ? 'hero-subtitle-dark' : 'hero-subtitle-light'} />
                 </div>
               </div>
-              <div className="card-geo-layer" style={{
-                background: themeColors.card.background,
-                border: `1px solid ${themeColors.card.border}`,
+              {/* About Me text — parchment card matching the explorer theme */}
+              <div style={{
+                background: 'rgba(245, 240, 232, 0.94)',
+                border: '1px solid rgba(236, 73, 153, 0.28)',
                 borderRadius: '12px',
                 padding: '16px 20px',
                 maxWidth: '480px',
                 marginTop: '14px',
                 marginBottom: '4px',
+                boxShadow: '0 18px 40px rgba(42, 31, 20, 0.12)',
               }}>
                 {[
                   "I am a Junior Developer from Liverpool, graduating with an MSc in Data Science and Artificial Intelligence in July. I studied Ecology and Conservation BSc(Hons) which taught me to read complex ecosystems before ever reading code. This instinct shapes how I approach the problems I encounter.",
                   "I apply AI to automate repetitive processes, freeing up space for the project elements requiring a human mind. I'm drawn to the craft of building thoughtful, usable interfaces and to the quieter work of supporting geographical research using computational methodology.",
                   "More recently, I've been utilising GIS, where my environmental background and engineering skills intersect.",
                   "I am motivated by novel challenges and believe that education is a lifelong endeavour.",
-                  "Whether working in academia or industry, I'm comfortable letting curiosity lead the way.",
+                  "Whether it be working in academia or industry; I'm comfortable letting curiosity lead the way.",
                 ].map((text, i, arr) => (
                   <p key={i} style={{
                     fontSize: '0.9rem',
                     lineHeight: 1.85,
-                    color: themeColors.text.secondary,
+                    color: '#000000',
                     marginBottom: i < arr.length - 1 ? '1.1rem' : 0,
                     fontFamily: '"Lora", Georgia, serif',
                   }}>{text}</p>
@@ -405,7 +411,7 @@ const About = () => {
                   transform: 'rotate(6deg)',
                   zIndex: 18,
                 }}>
-                  <HeroGlobe compact selectedWaypoint={selectedWaypoint} />
+                  <HeroGlobe compact />
                 </div>
 
                 {/* Lanyard — z-index 20 (above mount z-14 and globe z-18) */}
@@ -419,7 +425,7 @@ const About = () => {
       </div>
 
       {/* Expedition Map */}
-      <ExpeditionMap selectedWaypoint={selectedWaypoint} onSelectWaypoint={setSelectedWaypoint} />
+      <ExpeditionMap/>
 
       {/* About Section with Stickers and Journal */}
       <div className="py-8 md:py-12" style={{

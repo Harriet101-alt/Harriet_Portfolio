@@ -24,5 +24,6 @@ Project subagents live in `.claude/agents/`. Invoke them by name via the Agent t
 | `component-fix` | Surgical, on-brand, theme-aware change to ONE named component | Yes |
 | `design-system-validator` | Deeper component + interaction + token review | Only if told "fix" |
 | `front-end-developer` | Senior front-end work: scroll storytelling, animation, performance | Yes |
+| `motion-physicist` | Physics-real motion: pendulum/spring swing (lanyard), paper page-turn (FlipJournal), gravity/momentum/damping | Yes |
 
 All agents must obey §10 (Agent Rules) and §11 (Do-Not-Touch) of PORTFOLIO_CONTEXT.md.

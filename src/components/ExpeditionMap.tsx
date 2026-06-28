@@ -1,663 +1,685 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { WAYPOINTS, type Waypoint, type WaypointIcon } from '../data/waypoints';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { withAlpha } from '../hooks/useThemeColors';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  Home, 
+  Leaf, 
+  Compass, 
+  MapPin, 
+  GraduationCap, 
+  Info
+} from 'lucide-react';
+import { colors } from '../styles/colors';
+import { useThemeColors, withAlpha } from '../hooks/useThemeColors';
 
-// ─── PALETTE & TYPE TOKENS ───────────────────────────────────────────────────
-
-const PAPER = '#f5f0e8';
-const INK = '#1a1208';
-const INK_LIGHT = '#5c4f3a';
-const INK_FAINT = '#a09278';
-const PENCIL = '#8a8070';
-
-const FONT_DISPLAY = '"Playfair Display", Georgia, serif';
-const FONT_BODY = '"Lora", Georgia, serif';
-const FONT_MONO = '"Courier Prime", "Courier New", monospace';
-
-const SECTION_HEIGHT_DESKTOP = 340;
-const SECTION_HEIGHT_MOBILE = 260;
-const MOBILE_BREAKPOINT = 760;
-const MAP_WIDTH = 1200;
-const MAP_HEIGHT = 450;
-const MAP_X_OFFSET = 80;
-
-const ROUTE_DURATION = 900;
-const PIN_STAGGER = 180;
-
-// Pin geometry — used to align SVG path endpoints with the physical pin needle bottom
-const PIN_HEAD_HEIGHT = 26;       // matches pin-head div height
-const PIN_NEEDLE_HEIGHT = 16;     // matches pin needle div height
-const PIN_CONTAINER_OFFSET = 13;  // pin container top = y - PIN_CONTAINER_OFFSET
-const PIN_NEEDLE_BOTTOM_OFFSET = -PIN_CONTAINER_OFFSET + PIN_HEAD_HEIGHT + PIN_NEEDLE_HEIGHT;
-const EXPLORER_WIDTH = 32;
-const EXPLORER_HEIGHT = 52;
-
-
-function getPinDelay(i: number) {
-  return i * PIN_STAGGER;
+// Define the geographical data structure
+interface Destination {
+  id: string;
+  title: string;
+  subtitle: string;
+  theme: string;
+  description: string;
+  compactSummary: string;
+  details: string[];
+  hex: string;       // Exact cartographic token for SVG rendering
+  x: number;         // X coordinate (symmetrical horizontal step)
+  y: number;         // Y coordinate (alternating height)
 }
 
-interface PinPosition {
-  x: number;
-  y: number;
-}
+const EXPEDITION_PALETTE = {
+  paper: colors.expedition.paper,
+  paperWarm: colors.expedition.paperWarm,
+  ink: colors.expedition.ink,
+  inkLight: colors.expedition.inkLight,
+  inkFaint: colors.expedition.inkFaint,
+  pencil: colors.expedition.pencil,
+  stampRed: colors.expedition.stampRed,
+  stampGreen: colors.expedition.stampGreen,
+  mapBlue: colors.expedition.mapBlue,
+  coverBorderEnd: colors.expedition.coverBorderEnd,
+} as const;
 
-interface RouteSegment {
-  p0: PinPosition;
-  p1: PinPosition;
-  p2: PinPosition;
-  p3: PinPosition;
-}
+const FONT_DISPLAY = colors.typography.fonts.display;
+const FONT_BODY = colors.typography.fonts.body;
+const FONT_MONO = colors.typography.fonts.mono;
 
-const BASE_PIN_POINTS: PinPosition[] = [
-  { x: 120, y: 200 },
-  { x: 360, y: 270 },
-  { x: 600, y: 190 },
-  { x: 840, y: 270 },
-  { x: 1080, y: 200 },
-];
-
-const BASE_ROUTE_SEGMENTS: RouteSegment[] = [
-  { p0: { x: 120, y: 200 }, p1: { x: 190, y: 200 }, p2: { x: 290, y: 270 }, p3: { x: 360, y: 270 } },
-  { p0: { x: 360, y: 270 }, p1: { x: 450, y: 270 }, p2: { x: 510, y: 160 }, p3: { x: 600, y: 190 } },
-  { p0: { x: 600, y: 190 }, p1: { x: 690, y: 160 }, p2: { x: 750, y: 270 }, p3: { x: 840, y: 270 } },
-  { p0: { x: 840, y: 270 }, p1: { x: 910, y: 270 }, p2: { x: 1010, y: 200 }, p3: { x: 1080, y: 200 } },
-];
-
-function computeLayout(
-  containerWidth: number,
-  sectionHeight: number,
-  isMobile: boolean,
-): { positions: PinPosition[]; segments: RouteSegment[]; trackWidth: number } {
-  const trackWidth = containerWidth;
-  const xPad = 0;
-  const yPad = isMobile ? 20 : 28;
-  const usableWidth = Math.max(trackWidth - xPad * 2, 1);
-  const usableHeight = Math.max(sectionHeight - yPad * 2, 1);
-
-  const scalePoint = ({ x, y }: PinPosition): PinPosition => ({
-    x: xPad + ((x + MAP_X_OFFSET) / MAP_WIDTH) * usableWidth,
-    y: yPad + (y / MAP_HEIGHT) * usableHeight,
-  });
-
-  const positions = BASE_PIN_POINTS.map(scalePoint);
-  const segments = BASE_ROUTE_SEGMENTS.map((segment) => ({
-    p0: scalePoint(segment.p0),
-    p1: scalePoint(segment.p1),
-    p2: scalePoint(segment.p2),
-    p3: scalePoint(segment.p3),
-  }));
-
-  return { positions, segments, trackWidth };
-}
-
-function fullRoutePathD(segments: RouteSegment[]) {
-  if (!segments.length) return '';
-
-  const first = segments[0].p0;
-  const curves = segments.map((segment) => {
-    const c1y = segment.p1.y + PIN_NEEDLE_BOTTOM_OFFSET;
-    const c2y = segment.p2.y + PIN_NEEDLE_BOTTOM_OFFSET;
-    const p3y = segment.p3.y + PIN_NEEDLE_BOTTOM_OFFSET;
-    return `C ${segment.p1.x} ${c1y} ${segment.p2.x} ${c2y} ${segment.p3.x} ${p3y}`;
-  });
-
-  return `M ${first.x} ${first.y + PIN_NEEDLE_BOTTOM_OFFSET} ${curves.join(' ')}`;
-}
-
-function formatCoordinate(lat: number, lng: number) {
-  const latDeg = Math.floor(Math.abs(lat));
-  const latMin = Math.round((Math.abs(lat) - latDeg) * 60);
-  const lngDeg = Math.floor(Math.abs(lng));
-  const lngMin = Math.round((Math.abs(lng) - lngDeg) * 60);
-  const latDir = lat >= 0 ? 'N' : 'S';
-  const lngDir = lng >= 0 ? 'E' : 'W';
-  return `${latDeg}°${latMin}'${latDir}  ${lngDeg}°${lngMin}'${lngDir}`;
-}
-
-// ─── HAND-DRAWN ICONS ────────────────────────────────────────────────────────
-
-function HouseIcon({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 11.5 12 4l8 7.5" />
-      <path d="M6 10v9h12v-9" />
-      <path d="M10 19v-5h4v5" />
-    </svg>
-  );
-}
-
-function LeafIcon({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 19c-1-7 2-13 14-15 2 12-4 16-14 15Z" />
-      <path d="M6 18C9 13 12 10 18 5" />
-    </svg>
-  );
-}
-
-function CompassIcon({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3v2M12 19v2M3 12h2M19 12h2" />
-      <path d="M12 7l2.4 4.6L19 14l-4.6 2.4L12 21l-2.4-4.6L5 14l4.6-2.4Z" />
-    </svg>
-  );
-}
-
-function CircuitIcon({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="6" cy="6" r="2" />
-      <circle cx="18" cy="6" r="2" />
-      <circle cx="12" cy="18" r="2" />
-      <path d="M8 6h8M6 8v4l6 6M18 8v4l-6 6" />
-    </svg>
-  );
-}
-
-function WaypointGlyph({ icon, color }: { icon: WaypointIcon; color: string }) {
-  switch (icon) {
-    case 'house':
-      return <HouseIcon color={color} />;
-    case 'leaf':
-      return <LeafIcon color={color} />;
-    case 'compass':
-      return <CompassIcon color={color} />;
-    case 'circuit':
-      return <CircuitIcon color={color} />;
-    default:
-      return null;
+const DESTINATIONS: Destination[] = [
+  {
+    id: 'liverpool-origin',
+    title: 'Liverpool, UK',
+    subtitle: 'Origin',
+    theme: 'Home & Upbringing',
+    description: 'The starting point of the expedition. A historic port city rich in culture, maritime heritage, and musical legacy, laying the foundations for a lifetime of curiosity and exploration.',
+    compactSummary: 'Liverpool is the expedition origin: a culturally rich port city where curiosity, research habits, and analytical thinking first took root.',
+    details: [
+      'Foundations of technical curiosity and academic interest',
+      'Developed love for research and analytical thinking',
+      'Fostered in a vibrant cultural & scientific environment'
+    ],
+    hex: EXPEDITION_PALETTE.stampRed,
+    x: 120,
+    y: 200
+  },
+  {
+    id: 'lancaster-uni',
+    title: 'Lancaster University',
+    subtitle: 'Ecology & Conservation',
+    theme: 'Undergraduate Studies',
+    description: 'Immersive exploration into forest ecology, biodiverse habitats, and wildlife statistics. Cultivated a robust methodology for field research, biological modeling, and statistical data collection.',
+    compactSummary: 'Lancaster shaped the field-science foundation: ecology, conservation, GIS-supported fieldwork, biological modelling, and climate-impact research methods.',
+    details: [
+      'Earned BSc with focus on Ecological modeling and environmental systems',
+      'Conducted field projects utilizing statistical GIS software',
+      'Pioneered research on climatic impact variables on habitat conservation'
+    ],
+    hex: EXPEDITION_PALETTE.stampGreen,
+    x: 360,
+    y: 270
+  },
+  {
+    id: 'kuala-lumpur',
+    title: 'Kuala Lumpur, Malaysia',
+    subtitle: 'TEFL',
+    theme: 'International Pedagogy',
+    description: 'Ventured into Southeast Asia to teach English as a Foreign Language in Kuala Lumpur. Formulated innovative bilingual curricula and nurtured cross-cultural communication leadership.',
+    compactSummary: 'Kuala Lumpur added international teaching experience, bilingual curriculum design, active-learning tools, and confident cross-cultural communication.',
+    details: [
+      'Engineered interactive English language programs and active learning tools',
+      'Navigated multicultural teamwork and adapted to dynamic urban life',
+      'Developed robust public speaking, leadership, and instructional skills'
+    ],
+    hex: colors.pink[600],
+    x: 600,
+    y: 190
+  },
+  {
+    id: 'seville-school',
+    title: 'Seville, Spain',
+    subtitle: 'International School',
+    theme: 'Bilingual Academics',
+    description: 'Relocated to beautiful Andalusia to teach at a prestigious international school. Crafted secondary school science curriculums and perfected bilingual technical teaching patterns.',
+    compactSummary: 'Seville developed bilingual science teaching, physical-geography curriculum design, professional Spanish, and international mentoring experience.',
+    details: [
+      'Designed custom physical geography and life sciences curricula',
+      'Acquired advanced proficiency in professional Spanish and pedagogical styles',
+      'Mentored youth and led international school scientific committees'
+    ],
+    hex: EXPEDITION_PALETTE.coverBorderEnd,
+    x: 840,
+    y: 270
+  },
+  {
+    id: 'liverpool-postgrad',
+    title: 'University of Liverpool',
+    subtitle: 'MSc Data Science & AI',
+    theme: 'Postgraduate Flight',
+    description: 'Returned to Liverpool to specialize in the cutting-edge fields of artificial intelligence, deep neural networks, machine learning algorithms, and high-performance technical computing.',
+    compactSummary: 'Liverpool postgraduate study connects the expedition back to data science: machine learning, neural networks, Python/R workflows, and ecological monitoring research.',
+    details: [
+      'Mastering advanced machine learning, neural networks, and statistical physics',
+      'Engineering predictive algorithms using modern Python & R scientific stacks',
+      'Conducting thesis research on data science methodologies for ecological monitoring'
+    ],
+    hex: EXPEDITION_PALETTE.mapBlue,
+    x: 1080,
+    y: 200
   }
+];
+
+// Symmetrical coordinate cubic Bezier segments definitions between adjacent pins index:
+// Seg 0: Pin 0 -> Pin 1, Seg 1: Pin 1 -> Pin 2, etc.
+interface BezierSegment {
+  p0: { x: number; y: number };
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  p3: { x: number; y: number };
 }
 
-// ─── ROUTE PATH (draws itself on scroll, then settles into a dashed trail) ──
+const BEZIER_SEGMENTS: BezierSegment[] = [
+  { 
+    p0: { x: 120, y: 200 }, 
+    p1: { x: 190, y: 200 }, 
+    p2: { x: 290, y: 270 }, 
+    p3: { x: 360, y: 270 } 
+  },
+  { 
+    p0: { x: 360, y: 270 }, 
+    p1: { x: 450, y: 270 }, 
+    p2: { x: 510, y: 160 }, 
+    p3: { x: 600, y: 190 } 
+  },
+  { 
+    p0: { x: 600, y: 190 }, 
+    p1: { x: 690, y: 160 }, 
+    p2: { x: 750, y: 270 }, 
+    p3: { x: 840, y: 270 } 
+  },
+  { 
+    p0: { x: 840, y: 270 }, 
+    p1: { x: 910, y: 270 }, 
+    p2: { x: 1010, y: 200 }, 
+    p3: { x: 1080, y: 200 } 
+  }
+];
 
-function RoutePath({ d, color, drawn, delay }: { d: string; color: string; drawn: boolean; delay: number }) {
-  const ref = useRef<SVGPathElement | null>(null);
-  const [length, setLength] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+// Helper to calculate a point on a cubic Bezier curve for coordinate (X, Y)
+const getCubicBezierPoint = (seg: BezierSegment, t: number) => {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
 
-  useEffect(() => {
-    if (ref.current) setLength(ref.current.getTotalLength());
-  }, [d]);
+  return {
+    x: mt3 * seg.p0.x + 3 * mt2 * t * seg.p1.x + 3 * mt * t2 * seg.p2.x + t3 * seg.p3.x,
+    y: mt3 * seg.p0.y + 3 * mt2 * t * seg.p1.y + 3 * mt * t2 * seg.p2.y + t3 * seg.p3.y
+  };
+};
 
-  useEffect(() => {
-    if (!drawn) setRevealed(false);
-  }, [drawn]);
+// Travel index progress (0 = Liverpool Origin, 4 = University of Liverpool)
+const getPositionOnExpeditionPath = (progress: number) => {
+  if (progress <= 0) return { x: BEZIER_SEGMENTS[0].p0.x, y: BEZIER_SEGMENTS[0].p0.y };
+  if (progress >= 4) return { x: BEZIER_SEGMENTS[3].p3.x, y: BEZIER_SEGMENTS[3].p3.y };
 
-  return (
-    <path
-      ref={ref}
-      d={d}
-      stroke={color}
-      strokeWidth={2}
-      fill="none"
-      strokeLinecap="round"
-      strokeDasharray={revealed ? '6 4' : length || 1}
-      strokeDashoffset={drawn ? 0 : length}
-      style={{ transition: `stroke-dashoffset ${ROUTE_DURATION}ms ease-in-out ${delay}ms` }}
-      onTransitionEnd={() => {
-        if (drawn) setRevealed(true);
-      }}
-    />
-  );
-}
-
-// ─── PIN ─────────────────────────────────────────────────────────────────────
-
-interface PinProps {
-  waypoint: Waypoint;
-  index: number;
-  x: number;
-  y: number;
-  started: boolean;
-  isActive: boolean;
-  pulseKey: number;
-  onClick: (index: number) => void;
-  pinRef: (el: HTMLDivElement | null) => void;
-}
-
-function Pin({ waypoint, index, x, y, started, isActive, pulseKey, onClick, pinRef }: PinProps) {
-  const delay = getPinDelay(index);
-  const { isDarkMode } = useDarkMode();
-  return (
-    <div
-      ref={pinRef}
-      className="expedition-pin"
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y - PIN_CONTAINER_OFFSET,
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        cursor: 'pointer',
-        opacity: started ? undefined : 0,
-        animation: started ? `pinDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms both` : 'none',
-        zIndex: isActive ? 5 : 3,
-      }}
-      onClick={() => onClick(index)}
-      role="button"
-      tabIndex={0}
-      aria-label={`${waypoint.label} — ${waypoint.sublabel}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onClick(index);
-      }}
-    >
-      <div style={{ position: 'relative', width: PIN_HEAD_HEIGHT, height: PIN_HEAD_HEIGHT }}>
-        {isActive && (
-          <span
-            key={pulseKey}
-            className="pin-pulse"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              border: `2px solid ${waypoint.color}`,
-              animation: 'pinPulse 0.6s ease-out 3',
-            }}
-          />
-        )}
-        <div
-          className="pin-head"
-          style={{
-            width: PIN_HEAD_HEIGHT,
-            height: PIN_HEAD_HEIGHT,
-            borderRadius: '50%',
-            background: waypoint.color,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-            transition: 'transform 0.2s ease',
-          }}
-        >
-          <WaypointGlyph icon={waypoint.icon} color={PAPER} />
-        </div>
-      </div>
-      <div style={{ width: 2, height: PIN_NEEDLE_HEIGHT, background: waypoint.color }} />
-      <div style={{ marginTop: 4, textAlign: 'center', maxWidth: 104 }}>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 600, color: isDarkMode ? 'rgba(255,255,255,0.9)' : INK, lineHeight: 1.25 }}>
-          {waypoint.label}
-        </div>
-        <div style={{ fontFamily: FONT_MONO, fontSize: 9, fontStyle: 'italic', color: isDarkMode ? 'rgba(255,255,255,0.6)' : INK_LIGHT, marginTop: 2 }}>
-          {waypoint.sublabel}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── FLOATING INFO CARD (portal-based, fixed positioning) ───────────────────
-
-interface ActiveCardState {
-  waypoint: Waypoint;
-  pinRect: DOMRect;
-  isMobile: boolean;
-}
-
-function FloatingInfoCard({ state, onClose }: { state: ActiveCardState; onClose: () => void }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const cardWidth = state.isMobile ? 200 : 250;
-  const viewportWidth = window.innerWidth;
-
-  let left = state.pinRect.left + state.pinRect.width / 2;
-  const top = state.pinRect.top - 12;
-
-  if (left - cardWidth / 2 < 8) left = cardWidth / 2 + 8;
-  if (left + cardWidth / 2 > viewportWidth - 8) left = viewportWidth - cardWidth / 2 - 8;
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      ref={cardRef}
-      style={{
-        position: 'fixed',
-        left,
-        top,
-        width: cardWidth,
-        transform: 'translate(-50%, -100%)',
-        background: '#ffffff',
-        border: `1px solid ${withAlpha(PENCIL, 0.6)}`,
-        borderRadius: 4,
-        padding: '10px 12px 12px',
-        boxShadow: '0 10px 30px rgba(26,18,8,0.18)',
-        zIndex: 9999,
-        maxHeight: 220,
-        overflowY: 'auto',
-        pointerEvents: 'auto',
-      }}
-    >
-      {/* Caret arrow pointing down */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: -6,
-          left: '50%',
-          width: 10,
-          height: 10,
-          background: '#fff',
-          borderRight: `1px solid ${PENCIL}`,
-          borderBottom: `1px solid ${PENCIL}`,
-          transform: 'translateX(-50%) rotate(45deg)',
-        }}
-      />
-      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: INK_FAINT, letterSpacing: '0.04em', marginBottom: 5 }}>
-        {formatCoordinate(state.waypoint.lat, state.waypoint.lng)}
-      </div>
-      <div style={{ fontFamily: FONT_BODY, fontSize: 11, lineHeight: 1.55, color: INK }}>
-        {state.waypoint.bio}
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-// ─── EXPLORER CHARACTER ──────────────────────────────────────────────────────
-
-function ExplorerCharacter() {
-  return (
-    <g style={{ filter: 'drop-shadow(1px 2px 3px rgba(0,0,0,0.3))' }}>
-      {/* Body */}
-      <ellipse cx="16" cy="28" rx="8" ry="10" fill="#E8C49A"/>
-      {/* Head */}
-      <circle cx="16" cy="14" r="9" fill="#F5D5A8"/>
-      {/* Hat (pith helmet) */}
-      <ellipse cx="16" cy="8" rx="11" ry="4" fill="#C8A84B"/>
-      <rect x="8" y="5" width="16" height="5" rx="2" fill="#D4B254"/>
-      {/* Hat band */}
-      <rect x="8" y="8" width="16" height="2" fill="#A0832A" opacity="0.5"/>
-      {/* Eyes */}
-      <circle cx="12" cy="14" r="1.5" fill="#3D2008"/>
-      <circle cx="20" cy="14" r="1.5" fill="#3D2008"/>
-      {/* Eye shine */}
-      <circle cx="12.7" cy="13.3" r="0.5" fill="white"/>
-      <circle cx="20.7" cy="13.3" r="0.5" fill="white"/>
-      {/* Smile */}
-      <path d="M 13 17 Q 16 19 19 17" stroke="#A0622A" strokeWidth="1" fill="none" strokeLinecap="round"/>
-      {/* Backpack */}
-      <rect x="22" y="20" width="7" height="10" rx="2" fill="#8B6914"/>
-      <rect x="23" y="22" width="5" height="3" rx="1" fill="#6B4F10" opacity="0.6"/>
-      {/* Shirt */}
-      <rect x="9" y="20" width="14" height="12" rx="3" fill="#8B9E6A"/>
-      {/* Legs */}
-      <line x1="12" y1="38" x2="10" y2="50" stroke="#5C3317" strokeWidth="3" strokeLinecap="round" className="explorer-leg-left"/>
-      <line x1="20" y1="38" x2="22" y2="50" stroke="#5C3317" strokeWidth="3" strokeLinecap="round" className="explorer-leg-right"/>
-      {/* Shoes */}
-      <ellipse cx="10" cy="50" rx="3" ry="2" fill="#3D2008" className="explorer-leg-left"/>
-      <ellipse cx="22" cy="50" rx="3" ry="2" fill="#3D2008" className="explorer-leg-right"/>
-      {/* Arms */}
-      <line x1="8" y1="24" x2="2" y2="32" stroke="#E8C49A" strokeWidth="2.5" strokeLinecap="round" className="explorer-arm-left"/>
-      <line x1="24" y1="24" x2="30" y2="32" stroke="#E8C49A" strokeWidth="2.5" strokeLinecap="round" className="explorer-arm-right"/>
-    </g>
-  );
-}
-
-// ─── COMPONENT ───────────────────────────────────────────────────────────────
+  const segmentIndex = Math.floor(progress);
+  const localT = progress - segmentIndex;
+  return getCubicBezierPoint(BEZIER_SEGMENTS[segmentIndex], localT);
+};
 
 export default function ExpeditionMap() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const hasAnimatedRef = useRef(false);
-  const hideTimerRef = useRef<number | null>(null);
-  const pinRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const themeColors = useThemeColors();
+  const isNight = themeColors.isDarkMode;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [currentProgress, setCurrentProgress] = useState(0); // value from 0 to 4
+  const [walkAnimationTime, setWalkAnimationTime] = useState(0);
+  const [visibleInfoIndex, setVisibleInfoIndex] = useState<number | null>(null);
+   
+  const targetProgressRef = useRef(0);
+  const animationFrameId = useRef<number | null>(null);
+  const mapInk = colors.black;
+  const mapInkMuted = colors.black;
+  const mapInkFaint = colors.black;
+  const mapBorder = isNight ? withAlpha(colors.pink[300], 0.35) : withAlpha(EXPEDITION_PALETTE.pencil, 0.45);
+  const mapAccent = isNight ? colors.pink[200] : colors.pink[800];
+  const locationTitlePink = colors.black;
+  const stampAccent = isNight ? colors.pink[200] : EXPEDITION_PALETTE.stampRed;
+  const gridLine = isNight ? withAlpha(colors.pink[200], 0.12) : withAlpha(EXPEDITION_PALETTE.ink, 0.1);
+  const activeDestination = DESTINATIONS[activeIndex];
+  const isInfoVisible = visibleInfoIndex === activeIndex;
+  const infoPlacement = activeDestination.x > 880 ? 'right' : activeDestination.x < 260 ? 'left' : 'center';
 
-  const [layoutWidth, setLayoutWidth] = useState(0);
-  const [started, setStarted] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [explorerIndex, setExplorerIndex] = useState(0);
-  const [activeCard, setActiveCard] = useState<ActiveCardState | null>(null);
-  const [pulseKey, setPulseKey] = useState(0);
-
-  const { isDarkMode } = useDarkMode();
-
+  // Trigger animation loop whenever target index changes
   useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const updateWidth = () => setLayoutWidth(track.getBoundingClientRect().width || window.innerWidth);
-    updateWidth();
-
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, []);
-
-  const resolvedWidth = layoutWidth || window.innerWidth;
-  const isMobile = resolvedWidth < MOBILE_BREAKPOINT;
-  const sectionHeight = isMobile ? SECTION_HEIGHT_MOBILE : SECTION_HEIGHT_DESKTOP;
-
-  const { positions, segments, trackWidth } = useMemo(
-    () => computeLayout(resolvedWidth, sectionHeight, isMobile),
-    [resolvedWidth, sectionHeight, isMobile],
-  );
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsInView(entry.intersectionRatio > 0.15);
-        if (entry.intersectionRatio >= 0.3 && !hasAnimatedRef.current) {
-          hasAnimatedRef.current = true;
-          setStarted(true);
+    targetProgressRef.current = activeIndex;
+    
+    const animateMigration = () => {
+      setCurrentProgress((prev) => {
+        const target = targetProgressRef.current;
+        const diff = target - prev;
+        
+        // If close enough, snap to target and clear
+        if (Math.abs(diff) < 0.02) {
+          return target;
         }
-      },
-      { threshold: [0, 0.15, 0.3, 0.8] },
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
+        
+        // Travel speed adjusted to feel comfortable, adding custom leg swing time
+        const step = diff > 0 ? 0.018 : -0.018;
+        const nextProgress = prev + step;
+        
+        setWalkAnimationTime((t) => t + 0.12);
+        return nextProgress;
+      });
+      
+      animationFrameId.current = requestAnimationFrame(animateMigration);
+    };
 
-  const handlePinClick = useCallback((index: number) => {
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
+    animationFrameId.current = requestAnimationFrame(animateMigration);
 
-    const turningOn = activeIndex !== index;
-    if (turningOn) {
-      setActiveIndex(index);
-      setExplorerIndex(index);
-      setPulseKey(Date.now()); // Restart pulse animation on re-click
-
-      const pinEl = pinRefs.current[index];
-      if (pinEl) {
-        const rect = pinEl.getBoundingClientRect();
-        setActiveCard({ waypoint: WAYPOINTS[index], pinRect: rect, isMobile });
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
       }
+    };
+  }, [activeIndex]);
 
-      const wp = WAYPOINTS[index];
-      window.dispatchEvent(
-        new CustomEvent('expedition:zoomToWaypoint', {
-          detail: { lat: wp.lat, lng: wp.lng, label: wp.label, index },
-        }),
-      );
-    } else {
-      setActiveIndex(null);
-      hideTimerRef.current = window.setTimeout(() => setActiveCard(null), 250);
+  // Is the character actively moving?
+  const isMoving = Math.abs(currentProgress - activeIndex) > 0.01;
+
+  // Determine hiker orientation (facing right or left)
+  const isFlipped = useRef(false);
+  useEffect(() => {
+    const diff = activeIndex - currentProgress;
+    if (Math.abs(diff) > 0.05) {
+      isFlipped.current = diff < 0;
     }
-  }, [activeIndex, isMobile]);
+  }, [activeIndex, currentProgress]);
 
-  useEffect(() => () => {
-    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-  }, []);
+  const currentCoords = getPositionOnExpeditionPath(currentProgress);
+  const selectDestination = (index: number) => {
+    setActiveIndex(index);
+    setVisibleInfoIndex(null);
+  };
 
-  const sectionStyle: React.CSSProperties = {
-    position: 'relative',
-    width: '100%',
-    height: sectionHeight,
-    background: isDarkMode ? 'rgba(10, 8, 4, 0.55)' : PAPER,
-    overflow: 'visible',
-    fontFamily: FONT_BODY,
-    transition: 'background 0.4s ease',
+  const toggleActiveInfo = () => {
+    setVisibleInfoIndex((current) => (current === activeIndex ? null : activeIndex));
+  };
+
+  // Calculate dynamic hiker legs swing when moving
+  const leftLegRotation = isMoving ? Math.sin(walkAnimationTime * 1.8) * 18 : 0;
+  const rightLegRotation = isMoving ? Math.cos(walkAnimationTime * 1.8) * 18 : 0;
+  // Small breathing bobbing up and down
+  const bobbingOffset = isMoving ? Math.abs(Math.sin(walkAnimationTime * 2.0)) * 4 : Math.sin(Date.now() / 250) * 2;
+
+  // Active Icon rendered based on Destination idx
+  const getDestinationIcon = (id: string, size: number = 18) => {
+    switch (id) {
+      case 'liverpool-origin':
+        return <Home size={size} />;
+      case 'lancaster-uni':
+        return <Leaf size={size} />;
+      case 'kuala-lumpur':
+        return <Compass size={size} />;
+      case 'seville-school':
+        return <MapPin size={size} />;
+      case 'liverpool-postgrad':
+        return <GraduationCap size={size} />;
+      default:
+        return <MapPin size={size} />;
+    }
   };
 
   return (
-    <section ref={sectionRef} style={sectionStyle} aria-label="Expedition route">
-      <style>{`
-        @keyframes pinDrop {
-          0%   { transform: translateX(-50%) translateY(-24px) scale(0.8); opacity: 0; }
-          60%  { transform: translateX(-50%) translateY(3px) scale(1.05); opacity: 1; }
-          80%  { transform: translateX(-50%) translateY(-2px) scale(0.98); }
-          100% { transform: translateX(-50%) translateY(0) scale(1); }
-        }
-        @keyframes pinPulse {
-          0%   { transform: scale(1); opacity: 0.55; }
-          100% { transform: scale(2.3); opacity: 0; }
-        }
-        @keyframes explorerLegLeft {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-        }
-        @keyframes explorerLegRight {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-        }
-        @keyframes explorerArmLeft {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-        }
-        @keyframes explorerArmRight {
-          0%, 100% { transform-box: fill-box; transform-origin: top; transform: rotate(-20deg); }
-          50%       { transform-box: fill-box; transform-origin: top; transform: rotate(20deg); }
-        }
-        .explorer-leg-left  { animation: explorerLegLeft  0.4s ease-in-out infinite; }
-        .explorer-leg-right { animation: explorerLegRight 0.4s ease-in-out infinite; }
-        .explorer-arm-left  { animation: explorerArmLeft  0.4s ease-in-out infinite; }
-        .explorer-arm-right { animation: explorerArmRight 0.4s ease-in-out infinite; }
-        .expedition-pin:hover .pin-head { transform: scale(1.08); }
-        .expedition-track::-webkit-scrollbar { display: none; }
-      `}</style>
+    <div
+      className="w-full bg-transparent flex flex-col items-center px-4 md:px-6 py-2 sm:py-3 md:py-4 antialiased transition-colors duration-700 select-none"
+      style={{ color: mapInk, fontFamily: FONT_BODY }}
+    >
+      {/* Main Map Presentation Stage */}
+      <main className="w-full max-w-[1200px] flex flex-col justify-center items-center">
 
-      {/* Cartographic paper grid */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `linear-gradient(${isDarkMode ? 'rgba(255,255,255,0.3)' : PENCIL} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? 'rgba(255,255,255,0.3)' : PENCIL} 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
-          opacity: 0.08,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Ruled midline */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: sectionHeight / 2,
-          height: 1,
-          background: isDarkMode ? 'rgba(255,255,255,0.5)' : PENCIL,
-          opacity: 0.3,
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div
-        ref={trackRef}
-        className="expedition-track"
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          overflowX: 'hidden',
-          overflowY: 'hidden',
-          scrollbarWidth: 'none',
-        }}
-      >
-        <div style={{ position: 'relative', width: trackWidth, height: '100%', margin: '0 auto' }}>
-          <svg
-            width={trackWidth}
-            height={sectionHeight}
-            style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}
+        {/* Signpost: how to use the map */}
+        <div className="mb-3 sm:mb-4 flex justify-center">
+          <div
+            className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs sm:text-sm uppercase tracking-wider shadow-sm transition-colors duration-700"
+            style={{
+              backgroundColor: withAlpha(isNight ? colors.dark[900] : EXPEDITION_PALETTE.paper, 0.72),
+              borderColor: withAlpha(mapAccent, 0.5),
+              color: mapAccent,
+              fontFamily: FONT_MONO,
+              fontWeight: 700,
+            }}
           >
-            <RoutePath d={fullRoutePathD(segments)} color={PENCIL} drawn={started} delay={0} />
+            <MapPin size={14} />
+            Click a pin to move the explorer
+          </div>
+        </div>
 
-            {positions.map((pos, i) => (
-              <circle
-                key={`node-${WAYPOINTS[i].id}`}
-                cx={pos.x}
-                cy={pos.y + PIN_NEEDLE_BOTTOM_OFFSET}
-                r={3.5}
-                fill={withAlpha(PENCIL, 0.65)}
-              />
-            ))}
+        {/* Interactive map box */}
+        <div 
+          id="expedition-map-canvas" 
+          className="w-full relative overflow-visible transition-all duration-700"
+          style={{
+            aspectRatio: '12 / 5.2',
+            background: 'transparent',
+          }}
+        >
+          
+          {/* Symmetrical Graph Paper Grid Background adapting dynamically to lighting */}
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-700" 
+            style={{ 
+              backgroundImage: `radial-gradient(ellipse at 30% 45%, ${withAlpha(EXPEDITION_PALETTE.stampGreen, isNight ? 0.08 : 0.1)} 0 1px, transparent 1px), linear-gradient(to right, ${gridLine} 1px, transparent 1px), linear-gradient(to bottom, ${gridLine} 1px, transparent 1px)`,
+              backgroundSize: '24px 24px',
+              opacity: 0.72
+            }} 
+          />
+
+          {/* Symmetrical Interactive Map SVG Canvas overlay */}
+          <svg className="w-full h-full absolute inset-0 z-10" viewBox="0 0 1200 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+            
+            {/* 1. Precise aligned path segments in cartographic stamp colours */}
+            {/* Draw first path segment */}
+            <path 
+              d={`M ${BEZIER_SEGMENTS[0].p0.x} ${BEZIER_SEGMENTS[0].p0.y} C ${BEZIER_SEGMENTS[0].p1.x} ${BEZIER_SEGMENTS[0].p1.y}, ${BEZIER_SEGMENTS[0].p2.x} ${BEZIER_SEGMENTS[0].p2.y}, ${BEZIER_SEGMENTS[0].p3.x} ${BEZIER_SEGMENTS[0].p3.y}`} 
+              stroke={activeIndex >= 1 ? EXPEDITION_PALETTE.stampRed : mapInk} 
+              strokeWidth={activeIndex >= 1 ? '3' : '2'} 
+              strokeDasharray="6 4" 
+              className="transition-all duration-500"
+              opacity={activeIndex >= 1 ? 0.95 : 0.3}
+            />
+
+            {/* Draw second segment */}
+            <path 
+              d={`M ${BEZIER_SEGMENTS[1].p0.x} ${BEZIER_SEGMENTS[1].p0.y} C ${BEZIER_SEGMENTS[1].p1.x} ${BEZIER_SEGMENTS[1].p1.y}, ${BEZIER_SEGMENTS[1].p2.x} ${BEZIER_SEGMENTS[1].p2.y}, ${BEZIER_SEGMENTS[1].p3.x} ${BEZIER_SEGMENTS[1].p3.y}`} 
+              stroke={activeIndex >= 2 ? colors.pink[600] : mapInk} 
+              strokeWidth={activeIndex >= 2 ? '3' : '2'} 
+              strokeDasharray="6 4" 
+              className="transition-all duration-500"
+              opacity={activeIndex >= 2 ? 0.95 : 0.3}
+            />
+
+            {/* Draw third segment */}
+            <path 
+              d={`M ${BEZIER_SEGMENTS[2].p0.x} ${BEZIER_SEGMENTS[2].p0.y} C ${BEZIER_SEGMENTS[2].p1.x} ${BEZIER_SEGMENTS[2].p1.y}, ${BEZIER_SEGMENTS[2].p2.x} ${BEZIER_SEGMENTS[2].p2.y}, ${BEZIER_SEGMENTS[2].p3.x} ${BEZIER_SEGMENTS[2].p3.y}`} 
+              stroke={activeIndex >= 3 ? EXPEDITION_PALETTE.coverBorderEnd : mapInk} 
+              strokeWidth={activeIndex >= 3 ? '3' : '2'} 
+              strokeDasharray="6 4" 
+              className="transition-all duration-500"
+              opacity={activeIndex >= 3 ? 0.95 : 0.3}
+            />
+
+            {/* Draw fourth segment */}
+            <path 
+              d={`M ${BEZIER_SEGMENTS[3].p0.x} ${BEZIER_SEGMENTS[3].p0.y} C ${BEZIER_SEGMENTS[3].p1.x} ${BEZIER_SEGMENTS[3].p1.y}, ${BEZIER_SEGMENTS[3].p2.x} ${BEZIER_SEGMENTS[3].p2.y}, ${BEZIER_SEGMENTS[3].p3.x} ${BEZIER_SEGMENTS[3].p3.y}`} 
+              stroke={activeIndex >= 4 ? EXPEDITION_PALETTE.mapBlue : mapInk} 
+              strokeWidth={activeIndex >= 4 ? '3' : '2'} 
+              strokeDasharray="6 4" 
+              className="transition-all duration-500"
+              opacity={activeIndex >= 4 ? 0.95 : 0.3}
+            />
+
+            {/* 2. Symmetrical Pin Marker stems and label vertical lines */}
+            {DESTINATIONS.map((dest, i) => {
+              const dY = dest.y;
+              const dX = dest.x;
+              const stemColor = mapInk;
+              const isActive = activeIndex === i;
+
+              return (
+                <g key={dest.id}>
+                  {/* Stem line crossing the map curve to frame the card beautifully */}
+                  <line 
+                    x1={dX} 
+                    y1={dY - 45} 
+                    x2={dX} 
+                    y2={dY + 12} 
+                    stroke={stemColor} 
+                    strokeWidth="1.2" 
+                    strokeLinecap="round"
+                    className="transition-all duration-300 pointer-events-none"
+                    opacity={isActive ? 0.75 : 0.15}
+                  />
+
+                  {/* Tiny dot base on the exact dashed target line itself */}
+                  <circle 
+                    cx={dX} 
+                    cy={dY} 
+                    r="4" 
+                    fill={isActive ? dest.hex : mapInk} 
+                    className="transition-all duration-300 pointer-events-none" 
+                    opacity={isActive ? 1.0 : 0.4}
+                  />
+                </g>
+              );
+            })}
           </svg>
 
-          {started && (
-            <div
-              style={{
-                position: 'absolute',
-                left: positions[explorerIndex].x - EXPLORER_WIDTH / 2,
-                top: positions[explorerIndex].y + PIN_NEEDLE_BOTTOM_OFFSET - EXPLORER_HEIGHT,
-                width: EXPLORER_WIDTH,
-                height: EXPLORER_HEIGHT,
-                pointerEvents: 'none',
-                transition: 'left 700ms cubic-bezier(0.22, 1, 0.36, 1), top 700ms cubic-bezier(0.22, 1, 0.36, 1)',
-              }}
+          {/* 3. Absolute Positioned Interactive Pin Circles Over the Canvas */}
+          {DESTINATIONS.map((dest, i) => {
+            const isActive = activeIndex === i;
+            const markerYPercentage = ((dest.y - 40) / 450) * 100; // Offset above the path to make the stem visible
+            const markerXPercentage = (dest.x / 1200) * 100;
+
+            return (
+              <button
+                key={dest.id}
+                onClick={() => {
+                  selectDestination(i);
+                }}
+                className="absolute z-20 group -translate-x-1/2 -translate-y-1/2 cursor-pointer focus:outline-hidden"
+                style={{ 
+                  top: `${markerYPercentage}%`, 
+                  left: `${markerXPercentage}%` 
+                }}
+              >
+                {/* Active pulsating beacon halo behind the pin circle */}
+                {isActive && (
+                  <div className={`absolute inset-0 rounded-full scale-[1.6] bg-current opacity-30 animate-pulse`} style={{ color: dest.hex }} />
+                )}
+
+                {/* Pin Circle Body with premium paper style adapting to Day/Night */}
+                <div 
+                className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-500 shadow-sm hover:scale-105 ${
+                   isActive ? 'scale-110 shadow-md' : ''
+                }`}
+                style={{
+                   backgroundColor: isActive ? dest.hex : withAlpha(isNight ? colors.dark[900] : EXPEDITION_PALETTE.paper, 0.74),
+                   borderColor: isActive ? mapAccent : mapBorder,
+                   color: isActive ? EXPEDITION_PALETTE.paper : mapInkMuted,
+                }}
+                >
+                  {getDestinationIcon(dest.id, 16)}
+                </div>
+
+                {/* Quick Tooltip on Hover */}
+                {!isActive && (
+                  <div
+                    className="absolute bottom-11 left-1/2 -translate-x-1/2 italic text-xs px-2 py-1 rounded-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 pointer-events-none shadow-sm border"
+                    style={{
+                      backgroundColor: isNight ? colors.dark[900] : EXPEDITION_PALETTE.ink,
+                      borderColor: withAlpha(EXPEDITION_PALETTE.paper, 0.18),
+                      color: EXPEDITION_PALETTE.paper,
+                      fontFamily: FONT_BODY,
+                    }}
+                  >
+                    {dest.title}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+
+          {/* 4. Symmetrical Labels text array placed precisely below the map */}
+          {DESTINATIONS.map((dest, i) => {
+            const isActive = activeIndex === i;
+            // Place labels 35px below the baseline of current stage height
+            const textYPercentage = ((dest.y + 35) / 450) * 100;
+            const textXPercentage = (dest.x / 1200) * 100;
+
+            const isDoubleLineSub = dest.subtitle.includes('& AI');
+            const mainSub = isDoubleLineSub ? 'MSc Data Science' : dest.subtitle;
+            const secondarySub = isDoubleLineSub ? '& AI' : null;
+
+            return (
+              <div
+                key={`${dest.id}-label`}
+                className={`absolute -translate-x-1/2 text-center pointer-events-none transition-all duration-500 select-none ${
+                  isActive ? 'scale-[1.03]' : 'opacity-[0.9]'
+                }`}
+                style={{
+                  top: `${textYPercentage}%`,
+                  left: `${textXPercentage}%`,
+                  width: '180px'
+                }}
+              >
+                <div
+                  className={`text-xs md:text-sm leading-tight transition-colors duration-500 italic ${isActive ? 'font-bold' : ''}`}
+                  style={{
+                   color: locationTitlePink,
+                   fontFamily: FONT_BODY,
+                   fontWeight: isActive ? 800 : 700,
+                   textShadow: '0 1px 0 rgba(245, 240, 232, 0.9)',
+                  }}
+                >
+                  {dest.title}
+                </div>
+                
+                <div
+                  className="text-xs uppercase tracking-wider block mt-1 leading-none transition-colors duration-500"
+                  style={{
+                   color: mapInkFaint,
+                   fontFamily: FONT_MONO,
+                   fontWeight: 700,
+                   textShadow: '0 1px 0 rgba(245, 240, 232, 0.9)',
+                  }}
+                >
+                  {mainSub}
+                  {secondarySub && <span className="block mt-0.5">{secondarySub}</span>}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 5. Animated explorer interaction target */}
+          <button
+            type="button"
+            onClick={toggleActiveInfo}
+            aria-expanded={isInfoVisible}
+            aria-label={`Show field note for ${activeDestination.title}`}
+            className="absolute z-30 transition-all duration-75 cursor-pointer group focus:outline-hidden"
+            style={{
+              top: `${((currentCoords.y - 45 + bobbingOffset) / 450) * 100}%`, 
+              left: `${(currentCoords.x / 1200) * 100}%`,
+              transform: 'translate(-50%, -50%)',
+              transition: 'transform 0.15s ease'
+            }}
+          >
+            {!isInfoVisible && !isMoving && (
+              <span
+                className="absolute -top-12 left-9 flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.03]"
+                style={{
+                  backgroundColor: withAlpha(isNight ? colors.dark[900] : colors.white, 0.72),
+                  borderColor: withAlpha(EXPEDITION_PALETTE.stampGreen, 0.55),
+                  color: EXPEDITION_PALETTE.stampGreen,
+                  fontFamily: FONT_MONO,
+                }}
+              >
+                <Info size={12} />
+                Click for info
+                <svg
+                  className="absolute -left-10 top-7 overflow-visible"
+                  width="48"
+                  height="34"
+                  viewBox="0 0 48 34"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M46 4 C28 1 18 8 10 24"
+                    stroke={EXPEDITION_PALETTE.stampGreen}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray="3 4"
+                  />
+                  <path
+                    d="M5 22 L10 29 L16 23"
+                    stroke={EXPEDITION_PALETTE.stampGreen}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            )}
+            {/* Explorer marker */}
+            <svg
+              width="56"
+              height="66"
+              viewBox="0 0 56 66"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="filter drop-shadow-md"
+              style={{ transform: isFlipped.current ? 'scaleX(-1)' : 'scaleX(1)' }}
             >
-              <svg viewBox="0 0 32 52" width={EXPLORER_WIDTH} height={EXPLORER_HEIGHT}>
-                <ExplorerCharacter />
-              </svg>
+              {/* Backpack */}
+              <rect x="7" y="24" width="12" height="22" rx="3" fill={EXPEDITION_PALETTE.stampGreen} stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.8" />
+              <path d="M10 30 H17 M10 36 H17" stroke={withAlpha(EXPEDITION_PALETTE.paper, 0.85)} strokeWidth="1.2" strokeLinecap="round" />
+
+              {/* Legs with boots */}
+              <g style={{ transform: `rotate(${leftLegRotation}deg)`, transformOrigin: '26px 43px' }}>
+                <path d="M24 42 L22 55" stroke="#6b5744" strokeWidth="4" strokeLinecap="round" />
+                <path d="M18 55 H27 V60 H17 Z" fill={EXPEDITION_PALETTE.ink} />
+              </g>
+              <g style={{ transform: `rotate(${rightLegRotation}deg)`, transformOrigin: '33px 43px' }}>
+                <path d="M33 42 L35 55" stroke="#6b5744" strokeWidth="4" strokeLinecap="round" />
+                <path d="M31 55 H41 V60 H30 Z" fill={EXPEDITION_PALETTE.ink} />
+              </g>
+
+              {/* Field jacket and scarf */}
+              <path d="M18 25 C20 19 36 19 39 25 L41 43 C36 47 23 47 17 43 Z" fill="#8a6240" stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.8" />
+              <path d="M24 25 L29 36 L35 25" stroke={EXPEDITION_PALETTE.paperWarm} strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M25 24 C28 27 32 27 35 24" stroke={stampAccent} strokeWidth="2.2" strokeLinecap="round" />
+              <circle cx="24" cy="34" r="1.3" fill={EXPEDITION_PALETTE.ink} />
+              <circle cx="33" cy="34" r="1.3" fill={EXPEDITION_PALETTE.ink} />
+
+              {/* Arms */}
+              <path d="M18 29 L10 39" stroke="#8a6240" strokeWidth="4" strokeLinecap="round" />
+              <path d="M39 29 L47 40" stroke="#8a6240" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="9" cy="40" r="2.2" fill="#d7a078" stroke={EXPEDITION_PALETTE.ink} strokeWidth="0.8" />
+              <circle cx="48" cy="41" r="2.2" fill="#d7a078" stroke={EXPEDITION_PALETTE.ink} strokeWidth="0.8" />
+
+              {/* Neck, human face and hair */}
+              <rect x="27" y="20" width="5" height="5" rx="1.5" fill="#d7a078" stroke={EXPEDITION_PALETTE.ink} strokeWidth="0.7" />
+              <circle cx="30" cy="14" r="9" fill="#d7a078" stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.3" />
+              <path d="M22 12 C23 5 34 3 39 10 C35 8 30 8 24 11 Z" fill="#5c3d20" />
+              <circle cx="27" cy="14" r="1.1" fill={EXPEDITION_PALETTE.ink} />
+              <circle cx="33" cy="14" r="1.1" fill={EXPEDITION_PALETTE.ink} />
+              <path d="M29 15.5 L28 18 H31" stroke="#8b5a3c" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M27 20 C29 22 32 22 34 20" stroke={EXPEDITION_PALETTE.ink} strokeWidth="1" strokeLinecap="round" />
+
+              {/* Explorer hat */}
+              <path d="M20 10 C20 2 40 2 40 10 Z" fill={EXPEDITION_PALETTE.paperWarm} stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.2" />
+              <rect x="22" y="7.5" width="16" height="2.3" rx="1" fill={stampAccent} />
+              <path d="M14 11 C24 8 36 8 46 11 C48 13 47 15 44 15 C35 13 25 13 16 15 C13 15 12 13 14 11 Z" fill={EXPEDITION_PALETTE.paperWarm} stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.2" />
+
+              {!isMoving && (
+                <path d="M 26 -2 L 30 -7 L 34 -2 Z" fill={stampAccent} className="animate-bounce" />
+              )}
+            </svg>
+          </button>
+
+          {isInfoVisible && (
+            <div
+              className={`absolute z-40 w-[min(285px,78vw)] rounded-lg border p-4 shadow-xl backdrop-blur-sm transition-all duration-300 ${
+                infoPlacement === 'right'
+                  ? '-translate-x-full'
+                  : infoPlacement === 'center'
+                    ? '-translate-x-1/2'
+                    : ''
+              }`}
+              style={{
+                top: `clamp(6%, ${((currentCoords.y - 125) / 450) * 100}%, 58%)`,
+                left: `${(currentCoords.x / 1200) * 100}%`,
+                backgroundColor: withAlpha(isNight ? colors.dark[900] : colors.white, isNight ? 0.86 : 0.78),
+                borderColor: withAlpha(mapAccent, 0.52),
+                color: mapInk,
+                fontFamily: FONT_BODY,
+              }}
+              role="dialog"
+              aria-label={`${activeDestination.title} field note`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em]" style={{ color: mapInkFaint, fontFamily: FONT_MONO }}>
+                    Field note 0{activeIndex + 1}
+                  </p>
+                  <h3 className="mt-1 text-lg font-bold italic leading-tight" style={{ color: locationTitlePink, fontFamily: FONT_DISPLAY }}>
+                    {activeDestination.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVisibleInfoIndex(null)}
+                  className="rounded-full px-2 py-0.5 text-xs transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{
+                    border: `1px solid ${withAlpha(mapAccent, 0.4)}`,
+                    color: mapAccent,
+                    fontFamily: FONT_MONO,
+                  }}
+                  aria-label="Close field note"
+                >
+                  x
+                </button>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed">
+                {activeDestination.compactSummary}{' '}
+                <em className="font-semibold" style={{ color: mapAccent }}>
+                  {activeDestination.details.slice(0, 2).join('. ')}.
+                </em>
+              </p>
             </div>
           )}
 
-          {WAYPOINTS.map((wp, i) => (
-            <Pin
-              key={wp.id}
-              waypoint={wp}
-              index={i}
-              x={positions[i].x}
-              y={positions[i].y}
-              started={started}
-              isActive={activeIndex === i}
-              pulseKey={pulseKey}
-              onClick={handlePinClick}
-              pinRef={(el) => { pinRefs.current[i] = el; }}
-            />
-          ))}
         </div>
-      </div>
+      </main>
 
-      {activeCard && (
-        <FloatingInfoCard state={activeCard} onClose={() => { setActiveIndex(null); setActiveCard(null); }} />
-      )}
-
-      <div
-        style={{
-          position: 'fixed',
-          left: 16,
-          bottom: 16,
-          fontFamily: FONT_MONO,
-          fontSize: 11,
-          color: isDarkMode ? 'rgba(255,255,255,0.6)' : INK_FAINT,
-          letterSpacing: '0.02em',
-          opacity: isInView ? 1 : 0,
-          transition: 'opacity 400ms ease',
-          pointerEvents: 'none',
-          zIndex: 50,
-        }}
-      >
-        Currently: living in Liverpool
-      </div>
-    </section>
+    </div>
   );
 }

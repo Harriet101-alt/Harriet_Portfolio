@@ -26,6 +26,12 @@
   --color-pink-600: #B8727C;       /* Strong dusty pink */
   --color-pink-700: #A6707B;       /* Navigation text */
   --color-pink-800: #8B5A65;       /* Main text pink (WCAG AA) */
+  --color-punk-pink: #EC4999;
+  --color-expedition-paper: #f5f0e8;
+  --color-expedition-paper-warm: #ede9e2;
+  --color-expedition-brown: #8a6240;
+  --color-expedition-green: #3a5c3a;
+  --color-readable-body: #000000;
 
   /* Dark theme colors */
   --color-dark-800: #1E293B;       /* Very dark gray */
@@ -43,7 +49,7 @@
   --dusty-pink-darker: var(--color-pink-500);
   --white: var(--color-white);
   --light-pink-bg: var(--color-pink-50);
-  --text-pink: var(--color-pink-800);
+  --text-pink: var(--color-readable-body);
 }
 
 * {
@@ -110,13 +116,11 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Lora", Georgia, serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: transparent;
-  color: var(--text-pink);
+  color: var(--color-readable-body);
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -664,6 +668,8 @@ body {
   animation: blink 1s infinite;
   color: var(--dusty-pink-darker);
   font-weight: normal;
+  vertical-align: baseline;
+  transform: translateY(-0.03em);
 }
 
 @keyframes blink {

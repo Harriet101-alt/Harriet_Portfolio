@@ -445,7 +445,13 @@ const Projects = () => {
                   />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-gray-800 border-pink-200">
+              <TooltipContent
+                style={{
+                  background: 'rgba(245, 240, 232, 0.96)',
+                  color: '#000000',
+                  borderColor: themeColors.colors.pink[200],
+                }}
+              >
                 <p>all favicons created by me!</p>
               </TooltipContent>
             </Tooltip>
@@ -470,7 +476,10 @@ const Projects = () => {
                 <CardHeader>
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <CardTitle className="text-xl transition-colors group-hover:!text-pink-500 dark:group-hover:!text-pink-400">
+                      <CardTitle
+                        className="text-xl transition-colors"
+                        style={{ color: themeColors.text.primary }}
+                      >
                         {project.title}
                       </CardTitle>
                       <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
