@@ -9,6 +9,7 @@ const Navigation = () => {
   const [activeTab, setActiveTab] = useState('about');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [portfolioButtonColor, setPortfolioButtonColor] = useState('#1a1208');
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const themeColors = useThemeColors();
   const navigate = useNavigate();
@@ -20,6 +21,57 @@ const Navigation = () => {
     { id: 'experience', label: 'Experience' },
     { id: 'skills', label: 'Skills' }
   ], []);
+
+  // Track portfolio button color based on which section is in view
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.3,
+      rootMargin: '-80px 0px 0px 0px'
+    };
+
+    const colorMap: { [key: string]: string } = {
+      'about': '#1a1208',
+      'expedition-map': '#8B5A65',
+      'flip-journal': '#1a1208',
+      'projects': '#8B5A65',
+      'experience': '#1a1208',
+      'skills': '#1a1208'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      let highestElement = null;
+      let highestRatio = 0;
+
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio > highestRatio) {
+          highestRatio = entry.intersectionRatio;
+          highestElement = entry.target.getAttribute('data-section');
+        }
+      });
+
+      if (highestElement && colorMap[highestElement]) {
+        setPortfolioButtonColor(colorMap[highestElement]);
+      }
+    }, observerOptions);
+
+    // Observe section elements
+    const sectionsToObserve = ['about', 'expedition-map', 'flip-journal', 'projects', 'experience', 'skills'];
+    sectionsToObserve.forEach(sectionId => {
+      const element = document.getElementById(sectionId) || document.querySelector(`[data-section="${sectionId}"]`);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => {
+      sectionsToObserve.forEach(sectionId => {
+        const element = document.getElementById(sectionId) || document.querySelector(`[data-section="${sectionId}"]`);
+        if (element) {
+          observer.unobserve(element);
+        }
+      });
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -109,19 +161,24 @@ const Navigation = () => {
       <div className="nav-container">
         <button className="signature-name"
           type="button"
-          style={{ 
-            cursor: 'pointer', 
-            color: isDarkMode ? themeColors.colors.pink[100] : '#1a1208',
-            background: 'none', 
+          style={{
+            cursor: 'pointer',
+            color: portfolioButtonColor,
+            background: 'none',
             border: 'none',
-            WebkitTextFillColor: isDarkMode ? themeColors.colors.pink[100] : '#1a1208',
+            fontFamily: '"Geist Pixel", monospace',
+            fontSize: '1.5rem',
+            fontWeight: 400,
+            letterSpacing: '0.04em',
+            WebkitTextFillColor: portfolioButtonColor,
             textShadow: isDarkMode
               ? `0 1px 12px ${withAlpha(themeColors.colors.pink[300], 0.24)}`
-              : '0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.18)'
+              : '0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.18)',
+            transition: 'color 0.4s ease, -webkit-text-fill-color 0.4s ease'
           }}
           onClick={() => navigate('/')}
-          aria-label="About Me - Go to homepage">
-          About Me
+          aria-label="My portfolio - Go to homepage">
+          My portfolio
         </button>
         
         {/* Desktop Navigation */}

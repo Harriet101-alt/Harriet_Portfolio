@@ -15,7 +15,6 @@
  *   9  Foreground grass
  */
 import { useEffect, useRef } from 'react';
-import { useDarkMode } from '../../hooks/useDarkMode';
 
 // ─── NIGHT-MODE COLOUR INTERPOLATION ─────────────────────────────────────────
 // Light mode keeps every original value untouched. In dark mode each property
@@ -23,40 +22,43 @@ import { useDarkMode } from '../../hooks/useDarkMode';
 // endpoint (d = 1). All endpoints are floored above pure black so body text
 // stays legible at maximum scroll.
 
-/** Linear interpolate two numbers. */
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
+// Colour interpolation helpers for future dark-mode integration
+// /** Linear interpolate two numbers. */
+// function lerp(a: number, b: number, t: number): number {
+//   return a + (b - a) * t;
+// }
 
-/** Parse "#RRGGBB" → [r,g,b]. */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
-}
+// Colour interpolation helpers for future dark-mode integration
+// /** Parse "#RRGGBB" → [r,g,b]. */
+// function hexToRgb(hex: string): [number, number, number] {
+//   const h = hex.replace('#', '');
+//   return [
+//     parseInt(h.slice(0, 2), 16),
+//     parseInt(h.slice(2, 4), 16),
+//     parseInt(h.slice(4, 6), 16),
+//   ];
+// }
 
-/** Lerp between two "#RRGGBB" colours, returning an "rgb(...)" string. */
-function lerpHex(from: string, to: string, t: number): string {
-  const [r1, g1, b1] = hexToRgb(from);
-  const [r2, g2, b2] = hexToRgb(to);
-  return `rgb(${Math.round(lerp(r1, r2, t))}, ${Math.round(lerp(g1, g2, t))}, ${Math.round(lerp(b1, b2, t))})`;
-}
+// /** Lerp between two "#RRGGBB" colours, returning an "rgb(...)" string. */
+// function lerpHex(from: string, to: string, t: number): string {
+//   const [r1, g1, b1] = hexToRgb(from);
+//   const [r2, g2, b2] = hexToRgb(to);
+//   return `rgb(${Math.round(lerp(r1, r2, t))}, ${Math.round(lerp(g1, g2, t))}, ${Math.round(lerp(b1, b2, t))})`;
+// }
 
 // Night sky-gradient stops: [duskHex, deepNightHex] at the original positions.
-const NIGHT_SKY_STOPS: { pos: string; dusk: string; night: string }[] = [
-  { pos: '0%',   dusk: '#2E4068', night: '#16203A' },
-  { pos: '34%',  dusk: '#3C4C72', night: '#1C2A48' },
-  { pos: '72%',  dusk: '#7A5A78', night: '#3A3656' },
-  { pos: '100%', dusk: '#C88B95', night: '#5C4A63' },
-];
+// (Kept for future dark-mode integration in JungleCanvas)
+// const NIGHT_SKY_STOPS: { pos: string; dusk: string; night: string }[] = [
+//   { pos: '0%',   dusk: '#2E4068', night: '#16203A' },
+//   { pos: '34%',  dusk: '#3C4C72', night: '#1C2A48' },
+//   { pos: '72%',  dusk: '#7A5A78', night: '#3A3656' },
+//   { pos: '100%', dusk: '#C88B95', night: '#5C4A63' },
+// ];
 
-function nightSkyGradient(d: number): string {
-  const stops = NIGHT_SKY_STOPS.map(s => `${lerpHex(s.dusk, s.night, d)} ${s.pos}`).join(', ');
-  return `linear-gradient(to bottom, ${stops})`;
-}
+// function nightSkyGradient(d: number): string {
+//   const stops = NIGHT_SKY_STOPS.map(s => `${lerpHex(s.dusk, s.night, d)} ${s.pos}`).join(', ');
+//   return `linear-gradient(to bottom, ${stops})`;
+// }
 
 // ─── SHARED LAYER WRAPPER ────────────────────────────────────────────────────
 interface LayerProps {

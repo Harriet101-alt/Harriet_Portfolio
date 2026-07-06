@@ -67,7 +67,9 @@ const About = () => {
           const visibleHeight = Math.max(0, visibleBottom - visibleTop);
 
           const progress = visibleHeight / windowHeight;
-          setScrollProgress(Math.min(1, Math.max(0, progress)));
+          const clampedProgress = Math.min(1, Math.max(0, progress));
+          console.log('Scroll progress:', { rect: { top: rect.top, height: sectionHeight }, visibleHeight, windowHeight, progress, clampedProgress });
+          setScrollProgress(clampedProgress);
           ticking = false;
         });
         ticking = true;
@@ -228,7 +230,7 @@ const About = () => {
                 <h1
                   className={isDarkMode ? 'hero-subtitle-dark' : 'hero-subtitle-light'}
                   style={{
-                    fontFamily: '"Times New Roman", Georgia, serif',
+                    fontFamily: '"Inter", Georgia, sans-serif',
                     fontWeight: 400,
                     letterSpacing: '0.04em',
                     fontSize: 'clamp(3rem, 9vw, 6.75rem)',
@@ -301,7 +303,7 @@ const About = () => {
             <div className="hidden md:flex items-start justify-start">
               <div
                 ref={collageRef}
-                style={{ position: 'relative', width: '380px', minHeight: '480px', flexShrink: 0 }}
+                style={{ position: 'relative', width: '380px', minHeight: '480px', flexShrink: 0, marginLeft: '60px' }}
               >
                 {/* ── Collage below Lanyard ──────────────────────────────────────
                     Row 1 — bridges the gap between Lanyard bottom and lily row
@@ -313,8 +315,8 @@ const About = () => {
                 {/* Row 1 — left: tropics (moved up 100px), right: dark-red lily (behind red lily, moved up 200px) */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% - 120px)',
-                  left: '3%',
+                  top: 'calc(100% - 40px)',
+                  left: 'calc(3% - 40px)',
                   transform: 'rotate(-9deg)',
                   zIndex: 13,
                 }}>
@@ -322,8 +324,8 @@ const About = () => {
                 </div>
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% - 210px)',
-                  right: '3%',
+                  top: 'calc(100% - 130px)',
+                  right: 'calc(3% + 40px)',
                   transform: 'rotate(8deg)',
                   zIndex: 12,
                 }}>
@@ -333,8 +335,8 @@ const About = () => {
                 {/* Row 2 — white lily (left) · red lily (right) */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% + 30px)',
-                  left: '-5%',
+                  top: 'calc(100% + 110px)',
+                  left: 'calc(-5% - 40px)',
                   transform: 'rotate(-8deg)',
                   zIndex: 14,
                 }}>
@@ -342,8 +344,8 @@ const About = () => {
                 </div>
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% + 20px)',
-                  right: '-8%',
+                  top: 'calc(100% + 100px)',
+                  right: 'calc(-8% + 40px)',
                   transform: 'rotate(6deg)',
                   zIndex: 14,
                 }}>
@@ -353,8 +355,8 @@ const About = () => {
                 {/* Row 3 — stickers filling gap between lilies and mountain */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% + 2px)',
-                  left: '-14px',
+                  top: 'calc(100% + 82px)',
+                  left: 'calc(-14px - 40px)',
                   transform: 'rotate(-4deg)',
                   zIndex: 13,
                 }}>
@@ -366,8 +368,8 @@ const About = () => {
                     midpoint → x:194px (left:40%), y:100%-109px — no x-overlap with either image */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% - 109px)',
-                  left: '40%',
+                  top: 'calc(100% - 29px)',
+                  left: 'calc(40% - 40px)',
                   transform: 'rotate(12deg)',
                   zIndex: 13,
                 }}>
@@ -378,8 +380,8 @@ const About = () => {
                     left: 38% keeps it clear of white lily (left:-5%) and red lily (right:-8%) */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% + 0px)',
-                  left: '38%',
+                  top: 'calc(100% + 80px)',
+                  left: 'calc(38% - 40px)',
                   transform: 'rotate(-8deg)',
                   zIndex: 13,
                 }}>
@@ -389,8 +391,8 @@ const About = () => {
                 {/* Row 4 — mountain at bottom centre of the triangle */}
                 <div style={{
                   position: 'absolute',
-                  top: 'calc(100% + 90px)',
-                  left: '50%',
+                  top: 'calc(100% + 170px)',
+                  left: 'calc(50% - 40px)',
                   transform: 'translateX(-50%) rotate(-3deg)',
                   zIndex: 14,
                 }}>
@@ -400,8 +402,8 @@ const About = () => {
                 {/* Globe — positioned between paragraph (left) and Lanyard (right) */}
                 <div style={{
                   position: 'absolute',
-                  left: '-80px',
-                  top: '35%',
+                  left: 'calc(-80px - 40px)',
+                  top: 'calc(35% + 80px)',
                   width: '150px',
                   height: '150px',
                   borderRadius: '50%',
@@ -415,7 +417,7 @@ const About = () => {
                 </div>
 
                 {/* Lanyard — z-index 20 (above mount z-14 and globe z-18) */}
-                <div style={{ position: 'relative', zIndex: 20 }}>
+                <div style={{ position: 'relative', zIndex: 20, marginTop: '80px', marginLeft: '-80px' }}>
                   <Lanyard />
                 </div>
               </div>
@@ -425,7 +427,9 @@ const About = () => {
       </div>
 
       {/* Expedition Map */}
-      <ExpeditionMap/>
+      <div id="expedition-map" data-section="expedition-map">
+        <ExpeditionMap/>
+      </div>
 
       {/* About Section with Stickers and Journal */}
       <div className="py-8 md:py-12" style={{
@@ -455,7 +459,7 @@ const About = () => {
             </div>
 
             {/* About Me Journal */}
-            <div className="w-full md:max-w-2xl lg:max-w-4xl relative z-20 px-1 md:px-0">
+            <div id="flip-journal" data-section="flip-journal" className="w-full md:max-w-2xl lg:max-w-4xl relative z-20 px-1 md:px-0">
               <FlipJournal />
             </div>
           </div>

@@ -24,23 +24,33 @@ const CARD_WIDTH = px(250);
 const CARD_HEIGHT = px(340);
 const CARD_PADDING = px(12);
 const PHOTO_WIDTH = CARD_WIDTH - CARD_PADDING * 2;
-const PHOTO_HEIGHT = px(185);
+const PHOTO_HEIGHT = Math.round(PHOTO_WIDTH * 4 / 3);  // 3:4 portrait aspect ratio
 const CONTAINER_WIDTH = CARD_WIDTH + px(48);   // keeps the badge centred within the 380px collage column
 
 const MAX_ROTATION = 20;
+const MAX_TWIST = 12;                         // max roll rotation on vertical axis
 const DRAG_ROTATION_FACTOR = 0.3;
+const DRAG_TWIST_FACTOR = 0.2;                // twist increases with drag
 const PROXIMITY_RADIUS = 160;
 const PROXIMITY_MAX_ROTATION = 10;
-const SCROLL_SWING_AMPLITUDE = 20;
-const SCROLL_SWING_BACK = 8;   // ← one value, used both ways
-const SCROLL_SETTLE_DELAY = 260;
+const SCROLL_IMPULSE_AMPLITUDE = 25;          // initial swing amplitude from scroll
+const CARD_TILT_FACTOR = 0.35;                // 3D tilt multiplier (rotateX)
+const IDLE_SWAY_AMPLITUDE = 2.5;              // tiny amplitude for idle oscillation
+const IDLE_SWAY_FREQUENCY = 0.8;              // cycles per second for idle motion
 
-const springConfig = { tension: 280, friction: 28, mass: 1 };
+// Entrance spring — slightly underdamped for visible damped decay
+const entranceSpringConfig = { tension: 280, friction: 28, mass: 1 };
+
+// Swing spring — critically damped for responsive but tight settling
+const swingSpringConfig = { tension: 240, friction: 34, mass: 1 };
+
+// Idle sway spring — very soft and slow
+const idleSwaySpringConfig = { tension: 60, friction: 12, mass: 1 };
 
 const profilePhotos = [
-  { src: profile1, alt: 'Harriet Fletcher profile photo 1' },
-  { src: profile2, alt: 'Harriet Fletcher profile photo 2' },
-  { src: profile3, alt: 'Harriet Fletcher profile photo 4' },
+  { src: profile1, alt: 'Harriet Fletcher profile photo 1', objectPosition: 'center top' },
+  { src: profile2, alt: 'Harriet Fletcher profile photo 2 (Cordoba)', objectPosition: 'left center' },
+  { src: profile3, alt: 'Harriet Fletcher profile photo 4', objectPosition: 'center top' },
 ];
 
 function clamp(value: number, min: number, max: number) {
@@ -52,80 +62,176 @@ export default function Lanyard() {
   const isDraggingRef = useRef<boolean>(false);
   const hasSettledRef = useRef<boolean>(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const lastScrollTimeRef = useRef<number>(0);
+  const idleOscillatorRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [profilePhotoIndex, setProfilePhotoIndex] = useState(0);
 
+  // Spring state with multiple physical degrees of freedom:
   // y: vertical drop offset (starts -180 = above rest position)
-  // rotation: pendulum swing angle
-  const [{ rotation, y }, api] = useSpring(() => ({
+  // rotation: yaw swing (left-right pendulum)
+  // twist: roll on vertical axis (spinning)
+  // idleSwayRotation: continuous idle oscillation
+  // strapCompressionY and cardTiltX are computed from rotation in the transforms
+  const [{ rotation, y, twist, idleSwayRotation }, api] = useSpring(() => ({
     rotation: -8,
     y: -180,
-    config: springConfig,
+    twist: 0,
+    idleSwayRotation: 0,
+    config: entranceSpringConfig,
   }));
+
+  // Idle oscillation: subtle continuous sway when nothing is happening
+  const startIdleOscillation = useCallback(() => {
+    if (idleOscillatorRef.current) clearInterval(idleOscillatorRef.current);
+
+    let phase = 0;
+    const dt = 16; // ~60fps
+    const cycleDuration = (1000 / IDLE_SWAY_FREQUENCY); // ms per cycle
+
+    idleOscillatorRef.current = setInterval(() => {
+      phase += (dt / cycleDuration) * Math.PI * 2;
+      const sway = Math.sin(phase) * IDLE_SWAY_AMPLITUDE;
+      const twist_sway = Math.cos(phase * 1.3) * (IDLE_SWAY_AMPLITUDE * 0.4);
+
+      if (!isDraggingRef.current && hasSettledRef.current) {
+        api.start({
+          idleSwayRotation: sway,
+          twist: twist_sway,
+          config: idleSwaySpringConfig,
+        });
+      }
+    }, dt);
+  }, [api]);
+
+  const stopIdleOscillation = useCallback(() => {
+    if (idleOscillatorRef.current) {
+      clearInterval(idleOscillatorRef.current);
+      idleOscillatorRef.current = null;
+    }
+  }, []);
 
   // On mount: drop into place, then run damped pendulum decay sequence
   useEffect(() => {
+    console.log('🎯 Lanyard mount: starting entrance animation');
     api.start({
       to: async (next) => {
         // Phase 1 — fall under gravity, slight bounce on catch
-        await next({ y: 0, config: { tension: 210, friction: 14, mass: 1.5 } });
+        await next({
+          y: 0,
+          config: { tension: 210, friction: 14, mass: 1.5 },
+        });
         // Phase 2 — damped pendulum: each peak ~70% of the last, alternating sides
-        await next({ rotation: 24,  config: { tension: 170, friction: 11 } });
-        await next({ rotation: -17, config: { tension: 170, friction: 12 } });
-        await next({ rotation: 11,  config: { tension: 175, friction: 14 } });
-        await next({ rotation: -7,  config: { tension: 180, friction: 16 } });
-        await next({ rotation: 4,   config: { tension: 185, friction: 18 } });
-        await next({ rotation: -2,  config: { tension: 190, friction: 20 } });
-        await next({ rotation: 0,   config: { tension: 200, friction: 24 } });
+        // This creates a naturally decaying oscillation (underdamped entrance)
+        await next({ rotation: 24, config: entranceSpringConfig });
+        await next({ rotation: -17, config: entranceSpringConfig });
+        await next({ rotation: 11, config: entranceSpringConfig });
+        await next({ rotation: -7, config: entranceSpringConfig });
+        await next({ rotation: 4, config: entranceSpringConfig });
+        await next({ rotation: -2, config: entranceSpringConfig });
+        await next({ rotation: 0, config: entranceSpringConfig });
         // Gate all interactive swings behind this flag
+        console.log('✅ Entrance animation complete, enabling interactions');
         hasSettledRef.current = true;
+        // Start idle oscillation once settled
+        startIdleOscillation();
       },
     });
-  // api is stable — safe to omit from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [api, startIdleOscillation]);
 
+  // Drag interaction: apply rotation and twist, stop idle sway
   const bind = useDrag(({ down, movement: [mx] }) => {
-    if (!hasSettledRef.current) return;
+    console.log('🖱️ Drag detected:', { down, mx, hasSettled: hasSettledRef.current });
+    if (!hasSettledRef.current) {
+      console.log('❌ Drag blocked: entrance animation not yet settled');
+      return;
+    }
     isDraggingRef.current = down;
+
     if (down) {
-      api.start({ rotation: clamp(mx * DRAG_ROTATION_FACTOR, -MAX_ROTATION, MAX_ROTATION) });
+      stopIdleOscillation();
+      const rotAngle = clamp(mx * DRAG_ROTATION_FACTOR, -MAX_ROTATION, MAX_ROTATION);
+      const twistAngle = clamp(mx * DRAG_TWIST_FACTOR, -MAX_TWIST, MAX_TWIST);
+      api.start({
+        rotation: rotAngle,
+        twist: twistAngle,
+        config: swingSpringConfig,
+      });
     } else {
-      api.start({ rotation: 0 });
+      api.start({
+        rotation: 0,
+        twist: 0,
+        config: swingSpringConfig,
+      });
+      startIdleOscillation();
     }
   });
 
-  // Scroll-triggered pendulum swing — only fires after initial sequence settles
+  // Scroll-driven swing: detect scroll velocity and apply spring impulse
+  // This replaces hardcoded setTimeout with physics-driven decay
   useEffect(() => {
-    const handleScroll = () => {
-      if (isDraggingRef.current || !hasSettledRef.current) return;
-      scrollTimerRef.current.forEach(clearTimeout);
-      scrollTimerRef.current = [];
+    let lastScrollY = window.scrollY;
 
-      api.start({ rotation: -SCROLL_SWING_AMPLITUDE });
-      scrollTimerRef.current.push(setTimeout(() => {
-        api.start({ rotation: SCROLL_SWING_AMPLITUDE });
-      }, 90));
-      scrollTimerRef.current.push(setTimeout(() => {
-        api.start({ rotation: SCROLL_SWING_BACK });
-      }, 180));
-      scrollTimerRef.current.push(setTimeout(() => {
-        api.start({ rotation: 0 });
-      }, SCROLL_SETTLE_DELAY));
+    const handleScroll = () => {
+      if (isDraggingRef.current || !hasSettledRef.current) {
+        console.log('⏸️ Scroll scroll blocked:', { isDragging: isDraggingRef.current, hasSettled: hasSettledRef.current });
+        return;
+      }
+      console.log('📜 Scroll detected, checking velocity...');
+
+      const currentTime = Date.now();
+      const timeSinceLastScroll = currentTime - lastScrollTimeRef.current;
+      const currentScrollY = window.scrollY;
+      const scrollDelta = currentScrollY - lastScrollY;
+
+      // Calculate scroll velocity (pixels per ms, then normalize)
+      const scrollVelocity = timeSinceLastScroll > 0 ? scrollDelta / timeSinceLastScroll : 0;
+
+      // Convert velocity to angular impulse (clamped)
+      const impulse = clamp(scrollVelocity * SCROLL_IMPULSE_AMPLITUDE, -SCROLL_IMPULSE_AMPLITUDE, SCROLL_IMPULSE_AMPLITUDE);
+
+      // Only trigger if velocity is above a small threshold
+      if (Math.abs(impulse) > 1) {
+        stopIdleOscillation();
+        // Apply impulse to rotation and correlated twist
+        api.start({
+          rotation: impulse > 0 ? SCROLL_IMPULSE_AMPLITUDE : -SCROLL_IMPULSE_AMPLITUDE,
+          twist: impulse * 0.4,
+          config: swingSpringConfig,
+        });
+        // Resume idle sway after a delay
+        const resumeIdleTimer = setTimeout(() => {
+          if (!isDraggingRef.current) {
+            startIdleOscillation();
+          }
+        }, 1200);
+        scrollTimerRef.current.push(resumeIdleTimer);
+      }
+
+      lastScrollY = currentScrollY;
+      lastScrollTimeRef.current = currentTime;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
       scrollTimerRef.current.forEach(clearTimeout);
+      scrollTimerRef.current = [];
     };
-  }, [api]);
+  }, [api, startIdleOscillation, stopIdleOscillation]);
 
   // Mouse proximity — gentle magnetic repulsion; gated behind hasSettled
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (isDraggingRef.current || !hasSettledRef.current) return;
+      if (isDraggingRef.current || !hasSettledRef.current) {
+        console.log('🚫 Proximity blocked:', { isDragging: isDraggingRef.current, hasSettled: hasSettledRef.current });
+        return;
+      }
       const container = containerRef.current;
-      if (!container) return;
+      if (!container) {
+        console.log('🚫 Container ref not found');
+        return;
+      }
+      console.log('👁️ Proximity check running');
 
       const rect = container.getBoundingClientRect();
       const badgeCenterX = rect.left + CONTAINER_WIDTH / 2;
@@ -135,22 +241,36 @@ export default function Lanyard() {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist > 0 && dist < PROXIMITY_RADIUS) {
+        stopIdleOscillation();
         const strength = (1 - dist / PROXIMITY_RADIUS) * PROXIMITY_MAX_ROTATION;
-        api.start({ rotation: clamp((-dx / dist) * strength, -PROXIMITY_MAX_ROTATION, PROXIMITY_MAX_ROTATION) });
+        api.start({
+          rotation: clamp((-dx / dist) * strength, -PROXIMITY_MAX_ROTATION, PROXIMITY_MAX_ROTATION),
+          config: swingSpringConfig,
+        });
       } else {
-        api.start({ rotation: 0 });
+        api.start({ rotation: 0, config: swingSpringConfig });
+        startIdleOscillation();
       }
     },
-    [api],
+    [api, startIdleOscillation, stopIdleOscillation],
   );
 
   const handleMouseLeave = useCallback(() => {
     if (isDraggingRef.current || !hasSettledRef.current) return;
-    api.start({ rotation: 0 });
-  }, [api]);
+    api.start({ rotation: 0, config: swingSpringConfig });
+    startIdleOscillation();
+  }, [api, startIdleOscillation]);
 
   const handleProfileClick = useCallback(() => {
     setProfilePhotoIndex((currentIndex) => (currentIndex + 1) % profilePhotos.length);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      scrollTimerRef.current.forEach(clearTimeout);
+      if (idleOscillatorRef.current) clearInterval(idleOscillatorRef.current);
+    };
   }, []);
 
   const currentProfilePhoto = profilePhotos[profilePhotoIndex];
@@ -190,17 +310,27 @@ export default function Lanyard() {
           left: '50%',
           width: `${CARD_WIDTH}px`,
           marginLeft: `-${CARD_WIDTH / 2}px`,
-          transform: y.to((yVal) => `translateY(${yVal}px)`),
+          transform: y.to((yVal: number) => `translateY(${yVal}px)`),
         }}
       >
-        {/* Inner rotation layer — pendulum swing, drag target */}
+        {/* Inner rotation layer — pendulum swing (yaw), drag target, with 3D perspective */}
         <animated.div
           {...bind()}
           role="img"
           aria-label="Harriet Fletcher's conference ID badge — drag to swing"
           style={{
             transformOrigin: 'top center',
-            transform: rotation.to((r) => `rotate(${r}deg)`),
+            // Combine multiple transforms: yaw swing + twist (roll) + 3D tilt + idle sway
+            transform: rotation.to((r: number) =>
+              twist.to((twst: number) =>
+                idleSwayRotation.to((idleSway: number) => {
+                  const totalRotation = r + idleSway;
+                  const tilt = totalRotation * CARD_TILT_FACTOR;
+                  return `rotateZ(${totalRotation}deg) rotateX(${tilt}deg) rotateY(${twst}deg)`;
+                })
+              )
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ) as any,
             touchAction: 'none',
             cursor: 'grab',
             userSelect: 'none',
@@ -329,7 +459,7 @@ export default function Lanyard() {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  objectPosition: 'center top',
+                  objectPosition: currentProfilePhoto.objectPosition,
                   display: 'block',
                   pointerEvents: 'none',
                 }}

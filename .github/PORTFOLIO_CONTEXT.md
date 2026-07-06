@@ -95,9 +95,12 @@ Warm frosted-glass panels (`rgba(250,246,238,0.72)`), earthy wood action buttons
 | **Lora** | `FONT_BODY` | Serif body in journal/map |
 | **Courier Prime** | `FONT_MONO` | Coordinates, stamps, mono labels |
 | **Georgia** | `HeroGlobe` | Globe info-card body |
+| **Inter** | Google Fonts | Headings only (About section, hero name) — use *strategically for headings ONLY* |
 | System sans stack | `App.css` `body` | Global default body text |
 
-Do **not** introduce Space Grotesk, Inter, or JetBrains Mono — they are not part of this design. Do not add new font families without explicit instruction.
+**⚠️ Inter usage rule:** Inter is for headings only. Do **NOT** use Inter on `ExpeditionMap`, `FlipJournal`, or any cartographic/journal components — these must preserve their serif identity (Playfair Display, Lora, Courier Prime). Inter is a headings accent, not a system font replacement.
+
+Do **not** introduce Space Grotesk, JetBrains Mono, or other sans-serif families without explicit instruction. Do not add new font families without explicit instruction.
 
 ### 4.6 Theming architecture — ⚠️ three access patterns coexist
 
