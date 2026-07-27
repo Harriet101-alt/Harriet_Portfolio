@@ -194,12 +194,12 @@ export default function ExpeditionMap() {
    
   const targetProgressRef = useRef(0);
   const animationFrameId = useRef<number | null>(null);
-  const mapInk = colors.black;
-  const mapInkMuted = colors.black;
-  const mapInkFaint = colors.black;
+  const mapInk = isNight ? themeColors.text.primary : colors.black;
+  const mapInkMuted = isNight ? themeColors.text.secondary : colors.black;
+  const mapInkFaint = isNight ? themeColors.text.tertiary : colors.black;
   const mapBorder = isNight ? withAlpha(colors.pink[300], 0.35) : withAlpha(EXPEDITION_PALETTE.pencil, 0.45);
   const mapAccent = isNight ? colors.pink[200] : colors.pink[800];
-  const locationTitlePink = colors.black;
+  const locationTitlePink = isNight ? themeColors.text.primary : colors.black;
   const stampAccent = isNight ? colors.pink[200] : EXPEDITION_PALETTE.stampRed;
   const gridLine = isNight ? withAlpha(colors.pink[200], 0.12) : withAlpha(EXPEDITION_PALETTE.ink, 0.1);
   const activeDestination = DESTINATIONS[activeIndex];
@@ -269,7 +269,7 @@ export default function ExpeditionMap() {
   const bobbingOffset = isMoving ? Math.abs(Math.sin(walkAnimationTime * 2.0)) * 4 : Math.sin(Date.now() / 250) * 2;
 
   // Active Icon rendered based on Destination idx
-  const getDestinationIcon = (id: string, size: number = 18) => {
+  const getDestinationIcon = (id: string, size: number | string = 18) => {
     switch (id) {
       case 'liverpool-origin':
         return <Home size={size} />;
@@ -312,12 +312,14 @@ export default function ExpeditionMap() {
         </div>
 
         {/* Interactive map box */}
-        <div 
-          id="expedition-map-canvas" 
+        <div
+          id="expedition-map-canvas"
           className="w-full relative overflow-visible transition-all duration-700"
           style={{
             aspectRatio: '12 / 5.2',
             background: 'transparent',
+            containerType: 'inline-size',
+            containerName: 'expedition-map',
           }}
         >
           
@@ -435,17 +437,20 @@ export default function ExpeditionMap() {
                 )}
 
                 {/* Pin Circle Body with premium paper style adapting to Day/Night */}
-                <div 
-                className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-500 shadow-sm hover:scale-105 ${
+                <div
+                className={`rounded-full border flex items-center justify-center transition-all duration-500 shadow-sm hover:scale-105 ${
                    isActive ? 'scale-110 shadow-md' : ''
                 }`}
                 style={{
+                   width: 'clamp(28px, 8cqw, 40px)',
+                   height: 'clamp(28px, 8cqw, 40px)',
+                   fontSize: 'clamp(0.7rem, 3.2cqw, 1rem)',
                    backgroundColor: isActive ? dest.hex : withAlpha(isNight ? colors.dark[900] : EXPEDITION_PALETTE.paper, 0.74),
                    borderColor: isActive ? mapAccent : mapBorder,
                    color: isActive ? EXPEDITION_PALETTE.paper : mapInkMuted,
                 }}
                 >
-                  {getDestinationIcon(dest.id, 16)}
+                  {getDestinationIcon(dest.id, '1em')}
                 </div>
 
                 {/* Quick Tooltip on Hover */}
@@ -486,7 +491,7 @@ export default function ExpeditionMap() {
                 style={{
                   top: `${textYPercentage}%`,
                   left: `${textXPercentage}%`,
-                  width: '180px'
+                  width: 'clamp(70px, 24cqw, 180px)'
                 }}
               >
                 <div
@@ -495,19 +500,21 @@ export default function ExpeditionMap() {
                    color: locationTitlePink,
                    fontFamily: FONT_BODY,
                    fontWeight: isActive ? 800 : 700,
-                   textShadow: '0 1px 0 rgba(245, 240, 232, 0.9)',
+                   textShadow: isNight ? '0 1px 8px rgba(15, 23, 42, 0.75)' : '0 1px 0 rgba(245, 240, 232, 0.9)',
+                   fontSize: 'clamp(0.65rem, 2.8cqw, 0.875rem)',
                   }}
                 >
                   {dest.title}
                 </div>
-                
+
                 <div
-                  className="text-xs uppercase tracking-wider block mt-1 leading-none transition-colors duration-500"
+                  className="expedition-label-caption text-xs uppercase tracking-wider block mt-1 leading-none transition-colors duration-500"
                   style={{
                    color: mapInkFaint,
                    fontFamily: FONT_MONO,
                    fontWeight: 700,
-                   textShadow: '0 1px 0 rgba(245, 240, 232, 0.9)',
+                   textShadow: isNight ? '0 1px 8px rgba(15, 23, 42, 0.75)' : '0 1px 0 rgba(245, 240, 232, 0.9)',
+                   fontSize: 'clamp(0.6rem, 2.6cqw, 0.75rem)',
                   }}
                 >
                   {mainSub}

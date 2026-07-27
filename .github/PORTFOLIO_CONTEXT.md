@@ -253,6 +253,7 @@ Keep all on-site copy in Harriet's voice; do not auto-rewrite project descriptio
 8. **Preserve voice.** Don't rewrite personal/project copy.
 9. **Prefer `useThemeColors()`** for new colour usage; flag (don't silently "fix") existing direct-import or hardcoded colour unless asked.
 10. **Don't summarise this file back to the user.** Use it silently as context.
+11. **Preserve `FlipJournal` structure and imagery.** The realistic journal background, book structure, page layout, and photo orientation/placement are part of the set-piece and must be maintained. Text inside the journal may be edited when requested, but do not replace, remove, rotate, or visually flatten the journal images/background without explicit approval.
 
 ---
 

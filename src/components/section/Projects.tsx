@@ -349,12 +349,12 @@ const Projects = () => {
 
       {/* Static "drag me!" text with arrow */}
       <div
+        className="hidden md:flex"
         style={{
           position: 'absolute',
           left: '85%',
           top: '5%',
           zIndex: 16,
-          display: 'flex',
           alignItems: 'center',
           gap: '8px',
           pointerEvents: 'none'
@@ -374,7 +374,7 @@ const Projects = () => {
         <span
           style={{
             fontFamily: "'DK Crayonista', cursive",
-            fontSize: '26px',
+            fontSize: 'clamp(1.15rem, 2vw, 1.625rem)',
             color: isDarkMode ? themeColors.colors.pink[200] : themeColors.colors.special.dragMe,
             fontWeight: 'bold',
             userSelect: 'none',
@@ -425,7 +425,7 @@ const Projects = () => {
 
       {/* main content container with the project cards */}
       <TooltipProvider delayDuration={200}>
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="flex items-center justify-center gap-1 mb-4">
             <h2 className="text-4xl font-bold" style={{ color: themeColors.text.primary }}>Projects</h2>
             <Tooltip>
@@ -447,8 +447,8 @@ const Projects = () => {
               </TooltipTrigger>
               <TooltipContent
                 style={{
-                  background: 'rgba(245, 240, 232, 0.96)',
-                  color: '#000000',
+                  background: isDarkMode ? themeColors.card.background : 'rgba(245, 240, 232, 0.96)',
+                  color: themeColors.text.primary,
                   borderColor: themeColors.colors.pink[200],
                 }}
               >
@@ -463,7 +463,7 @@ const Projects = () => {
           {/* grid layout for project cards */}
           <div
             key={currentPage}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-8"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 max-w-6xl mx-auto mb-8"
             style={{
               animation: `slideIn${direction === 'right' ? 'Right' : 'Left'} 0.4s ease-out`
             }}
@@ -502,7 +502,7 @@ const Projects = () => {
                       </Badge>
                     ))}
                   </div>
-                   <div className="flex gap-3" style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                   <div className="flex flex-wrap gap-3" style={{ marginTop: 'auto', paddingTop: '8px' }}>
                     {'isStoryMap' in project && project.isStoryMap ? (
                      <>
                        <button
@@ -558,7 +558,7 @@ const Projects = () => {
                       height="48"
                     />
                     <div className="flex-1">
-                      <CardTitle className="text-xl" style={{ color: themeColors.colors.dark[600] }}>
+                      <CardTitle className="text-xl" style={{ color: themeColors.text.tertiary }}>
                         Coming Soon
                       </CardTitle>
                       <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
@@ -579,7 +579,7 @@ const Projects = () => {
                       TBA
                     </Badge>
                   </div>
-                  <div className="flex gap-3 opacity-30" style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                  <div className="flex flex-wrap gap-3 opacity-30" style={{ marginTop: 'auto', paddingTop: '8px' }}>
                     <div className="project-btn flex items-center gap-1" style={{ pointerEvents: 'none' }}>
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
                       Details

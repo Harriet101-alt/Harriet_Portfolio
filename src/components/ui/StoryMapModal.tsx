@@ -59,7 +59,7 @@ export default function StoryMapModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem',
+        padding: 'clamp(0.5rem, 3vw, 2rem)',
       }}
     >
       <div
@@ -67,7 +67,7 @@ export default function StoryMapModal({
         style={{
           width: '100%',
           maxWidth: '1100px',
-          height: '85vh',
+          height: 'min(85vh, 56rem)',
           background: colors.white,
           borderRadius: '12px',
           overflow: 'hidden',

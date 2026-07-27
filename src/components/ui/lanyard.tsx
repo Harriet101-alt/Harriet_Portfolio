@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import { profile1, profile2, profile3 } from '../../assets';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 // This is a literal physical object (a real conference ID badge), so its
 // colours are fixed hex values rather than theme tokens — it does not
@@ -17,7 +18,15 @@ const px = (n: number) => Math.round(n * SCALE);
 
 const ANCHOR_SIZE = px(10);
 const STRAP_WIDTH = px(18);
-const STRAP_LENGTH = 180;          // strap drop length — tuned independently of SCALE (how far it falls)
+// Strap drop length — tuned independently of SCALE (how far it falls).
+// 320 = 180 + 140: the 140px used to live as a `top` offset on the whole
+// Lanyard wrapper in About.tsx (anchor+strap+clip+card all pushed down
+// together), which left a floating gap above the strap instead of the rope
+// visibly running from the anchor at the top of the collage down to the
+// card. That offset was moved here instead, so the anchor sits at the true
+// top (root top: 0) and the strap itself covers the distance — the card's
+// absolute position is unchanged (see About.tsx's Lanyard wrapper comment).
+const STRAP_LENGTH = 320;
 const CLIP_WIDTH = px(36);
 const CLIP_HEIGHT = px(14);
 const CARD_WIDTH = px(250);
@@ -58,6 +67,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export default function Lanyard() {
+  const { isDarkMode } = useDarkMode();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const hasSettledRef = useRef<boolean>(false);
@@ -65,6 +75,7 @@ export default function Lanyard() {
   const lastScrollTimeRef = useRef<number>(0);
   const idleOscillatorRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [profilePhotoIndex, setProfilePhotoIndex] = useState(0);
+  const clickAffordanceColor = isDarkMode ? '#FFF5F7' : '#000000';
 
   // Spring state with multiple physical degrees of freedom:
   // y: vertical drop offset (starts -180 = above rest position)
@@ -394,11 +405,13 @@ export default function Lanyard() {
                 right: `${px(-78)}px`,
                 width: `${px(118)}px`,
                 height: `${px(78)}px`,
-                color: '#000000',
+                color: clickAffordanceColor,
                 fontFamily: '"DK Crayonista", "Comic Sans MS", cursive',
                 fontSize: `${px(18)}px`,
                 fontWeight: 900,
-                textShadow: '0 1px 0 rgba(255,255,255,0.85), 0 0 1px rgba(0,0,0,0.35)',
+                textShadow: isDarkMode
+                  ? '0 1px 0 rgba(15,23,42,0.85), 0 0 10px rgba(255,245,247,0.45)'
+                  : '0 1px 0 rgba(255,255,255,0.85), 0 0 1px rgba(0,0,0,0.35)',
                 letterSpacing: '0.02em',
                 pointerEvents: 'none',
                 transform: 'rotate(-8deg)',

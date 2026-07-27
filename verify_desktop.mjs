@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const url = 'http://localhost:5173/';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto(url, { waitUntil: 'networkidle' });
+await page.locator('#flip-journal').scrollIntoViewIfNeeded();
+await page.waitForTimeout(500);
+const nextBtn = page.getByRole('button', { name: 'Next page' }).first();
+await nextBtn.click({ force: true });
+await page.waitForTimeout(1000);
+await page.screenshot({ path: '/Users/fletch02/portfolio-template.worktrees/Harriet_Portfolio/d_spread1.png' });
+const hasToggle = await page.getByText(/Read the story/).count();
+console.log('toggle buttons found on desktop (should be 0):', hasToggle);
+await browser.close();

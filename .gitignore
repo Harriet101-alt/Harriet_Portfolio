@@ -20,7 +20,10 @@ Thumbs.db
 .classpath
 
 # Claude AI
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/responsive-design/
+!.claude/skills/responsive-design/SKILL.md
 .c9/
 *.launch
 .settings/

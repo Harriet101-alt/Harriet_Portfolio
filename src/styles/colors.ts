@@ -66,11 +66,11 @@ export const colors = {
       },
     },
     dark: {
-      primary: '#f5f0e8',
-      secondary: '#ede9e2',
+      primary: '#101625',
+      secondary: '#1E293B',
       gradient: 'transparent',
       gradientEnd: 'transparent', // transparent — forest shows through section transitions
-      overlay: 'rgba(245, 240, 232, 0.72)',
+      overlay: 'rgba(12, 17, 30, 0.72)',
       // Dark mode sections: transparent so the forest background shows through
       sections: {
         about: 'transparent',
@@ -92,11 +92,11 @@ export const colors = {
       pink: '#EC4999',
     },
     dark: {
-      primary: '#000000',
-      secondary: '#000000',
-      tertiary: '#000000',
-      accent: '#8B2E1A',
-      pink: '#EC4999',
+      primary: '#FFF5F7',
+      secondary: '#FAE8ED',
+      tertiary: '#EABEC3',
+      accent: '#FDD5DF',
+      pink: '#FF94B4',
     },
   },
 
@@ -109,10 +109,10 @@ export const colors = {
       focus: 'rgba(234, 190, 195, 0.3)',
     },
     dark: {
-      primary: 'rgba(234, 190, 195, 0.1)',
-      hover: 'rgba(234, 190, 195, 0.2)',
+      primary: 'rgba(234, 190, 195, 0.14)',
+      hover: 'rgba(234, 190, 195, 0.24)',
       active: '#EABEC3',
-      focus: 'rgba(234, 190, 195, 0.3)',
+      focus: 'rgba(234, 190, 195, 0.38)',
     },
   },
 
@@ -128,13 +128,13 @@ export const colors = {
       mobile: 'rgba(254, 248, 250, 0.95)',
     },
     dark: {
-      background: 'rgba(245, 240, 232, 0.72)',
-      backgroundScrolled: 'rgba(245, 240, 232, 0.88)',
-      border: 'rgba(236, 73, 153, 0.12)',
-      borderScrolled: 'rgba(236, 73, 153, 0.18)',
-      shadow: 'rgba(42, 31, 20, 0.12)',
-      shadowScrolled: 'rgba(42, 31, 20, 0.18)',
-      mobile: 'rgba(245, 240, 232, 0.95)',
+      background: 'rgba(15, 23, 42, 0.62)',
+      backgroundScrolled: 'rgba(15, 23, 42, 0.82)',
+      border: 'rgba(234, 190, 195, 0.16)',
+      borderScrolled: 'rgba(234, 190, 195, 0.24)',
+      shadow: 'rgba(2, 6, 23, 0.28)',
+      shadowScrolled: 'rgba(2, 6, 23, 0.38)',
+      mobile: 'rgba(15, 23, 42, 0.95)',
     },
   },
 
@@ -148,10 +148,10 @@ export const colors = {
         shadow: 'rgba(236, 73, 153, 0.28)',
       },
       dark: {
-        background: '#EABEC3',
-        text: '#000000',
+        background: '#C88B95',
+        text: '#FFF5F7',
         hover: '#EC4999',
-        shadow: 'rgba(236, 73, 153, 0.28)',
+        shadow: 'rgba(236, 73, 153, 0.34)',
       },
     },
     secondary: {
@@ -162,10 +162,10 @@ export const colors = {
         hover: '#FAE8ED',
       },
       dark: {
-        background: 'rgba(245, 240, 232, 0.9)',
-        text: '#000000',
+        background: 'rgba(30, 41, 59, 0.86)',
+        text: '#FFF5F7',
         border: '#EABEC3',
-        hover: '#FAE8ED',
+        hover: 'rgba(234, 190, 195, 0.18)',
       },
     },
     outline: {
@@ -177,9 +177,9 @@ export const colors = {
       },
       dark: {
         background: 'transparent',
-        text: '#8B2E1A',
+        text: '#FDD5DF',
         border: '#EABEC3',
-        hover: '#FAE8ED',
+        hover: 'rgba(234, 190, 195, 0.18)',
       },
     },
   },
@@ -192,9 +192,9 @@ export const colors = {
       shadow: 'rgba(42, 31, 20, 0.12)',
     },
     dark: {
-      background: '#f5f0e8',
-      border: 'rgba(234, 190, 195, 0.35)',
-      shadow: 'rgba(42, 31, 20, 0.18)',
+      background: 'rgba(16, 22, 37, 0.86)',
+      border: 'rgba(234, 190, 195, 0.28)',
+      shadow: 'rgba(2, 6, 23, 0.34)',
     },
   },
 

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "responsive:lint": "node scripts/responsive-lint.mjs",
+    "gemini:review": "node --env-file=.env scripts/gemini-review.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

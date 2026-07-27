@@ -45,7 +45,7 @@ function AppContent() {
         opacity = 0.66 + ((depth - 0.5) / 0.5) * (0.74 - 0.66);
       }
       if (overlayRef.current) {
-        overlayRef.current.style.background = `rgba(245, 240, 232, ${opacity.toFixed(3)})`;
+        overlayRef.current.style.setProperty('--reading-overlay-opacity', opacity.toFixed(3));
       }
     };
 
@@ -59,15 +59,20 @@ function AppContent() {
       {/* Layer 0–9: gamified forest world — never captures pointer events */}
       <ForestBackground />
 
+      <div className="theme-sunset-layer" aria-hidden="true">
+        <div className="theme-sun-disc" />
+        <div className="theme-horizon" />
+      </div>
+
       {/* Reading overlay — parchment wash for black text legibility */}
       <div
         ref={overlayRef}
+        className="reading-overlay"
         aria-hidden="true"
         style={{
           position: 'fixed',
           inset: 0,
           zIndex: 10,
-          background: 'rgba(245, 240, 232, 0.58)',
           pointerEvents: 'none',
         }}
       />

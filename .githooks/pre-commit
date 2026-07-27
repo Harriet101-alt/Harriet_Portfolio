@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -eu
+
+changed_files="$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^src/.*\.(css|tsx|ts)$|^index\.html$)' || true)"
+
+if [ -n "$changed_files" ]; then
+  npm run responsive:lint -- $changed_files
+fi
