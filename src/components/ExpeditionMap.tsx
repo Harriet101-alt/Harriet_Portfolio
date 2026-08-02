@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { 
   Home, 
   Leaf, 
@@ -191,9 +191,12 @@ export default function ExpeditionMap() {
   const [currentProgress, setCurrentProgress] = useState(0); // value from 0 to 4
   const [walkAnimationTime, setWalkAnimationTime] = useState(0);
   const [visibleInfoIndex, setVisibleInfoIndex] = useState<number | null>(null);
-   
+  const [infoOffsetPx, setInfoOffsetPx] = useState(0);
+
   const targetProgressRef = useRef(0);
   const animationFrameId = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const infoBoxRef = useRef<HTMLDivElement | null>(null);
   const mapInk = isNight ? themeColors.text.primary : colors.black;
   const mapInkMuted = isNight ? themeColors.text.secondary : colors.black;
   const mapInkFaint = isNight ? themeColors.text.tertiary : colors.black;
@@ -204,7 +207,6 @@ export default function ExpeditionMap() {
   const gridLine = isNight ? withAlpha(colors.pink[200], 0.12) : withAlpha(EXPEDITION_PALETTE.ink, 0.1);
   const activeDestination = DESTINATIONS[activeIndex];
   const isInfoVisible = visibleInfoIndex === activeIndex;
-  const infoPlacement = activeDestination.x > 880 ? 'right' : activeDestination.x < 260 ? 'left' : 'center';
 
   // Trigger animation loop whenever target index changes
   useEffect(() => {
@@ -262,6 +264,39 @@ export default function ExpeditionMap() {
     setVisibleInfoIndex((current) => (current === activeIndex ? null : activeIndex));
   };
 
+  // Field-note popup is anchored/centred on the explorer's x position by default.
+  // Since the map canvas can be far narrower than the popup's own width on small
+  // screens, measure the rendered box against the canvas bounds and nudge it back
+  // inside with a pixel offset rather than relying on fixed design-space thresholds.
+  useLayoutEffect(() => {
+    if (!isInfoVisible) {
+      setInfoOffsetPx(0);
+      return;
+    }
+
+    const measureAndClamp = () => {
+      const box = infoBoxRef.current;
+      const canvas = canvasRef.current;
+      if (!box || !canvas) return;
+
+      const boxRect = box.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const gutter = 8;
+
+      let offset = 0;
+      if (boxRect.left < canvasRect.left + gutter) {
+        offset = (canvasRect.left + gutter) - boxRect.left;
+      } else if (boxRect.right > canvasRect.right - gutter) {
+        offset = (canvasRect.right - gutter) - boxRect.right;
+      }
+      setInfoOffsetPx((prev) => (prev === offset ? prev : offset));
+    };
+
+    measureAndClamp();
+    window.addEventListener('resize', measureAndClamp);
+    return () => window.removeEventListener('resize', measureAndClamp);
+  }, [isInfoVisible, activeIndex]);
+
   // Calculate dynamic hiker legs swing when moving
   const leftLegRotation = isMoving ? Math.sin(walkAnimationTime * 1.8) * 18 : 0;
   const rightLegRotation = isMoving ? Math.cos(walkAnimationTime * 1.8) * 18 : 0;
@@ -314,6 +349,7 @@ export default function ExpeditionMap() {
         {/* Interactive map box */}
         <div
           id="expedition-map-canvas"
+          ref={canvasRef}
           className="w-full relative overflow-visible transition-all duration-700"
           style={{
             aspectRatio: '12 / 5.2',
@@ -540,7 +576,7 @@ export default function ExpeditionMap() {
           >
             {!isInfoVisible && !isMoving && (
               <span
-                className="absolute -top-12 left-9 flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.03]"
+                className="hidden md:flex absolute -top-12 left-9 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.03]"
                 style={{
                   backgroundColor: withAlpha(isNight ? colors.dark[900] : colors.white, 0.72),
                   borderColor: withAlpha(EXPEDITION_PALETTE.stampGreen, 0.55),
@@ -577,13 +613,15 @@ export default function ExpeditionMap() {
             )}
             {/* Explorer marker */}
             <svg
-              width="56"
-              height="66"
               viewBox="0 0 56 66"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               className="filter drop-shadow-md"
-              style={{ transform: isFlipped.current ? 'scaleX(-1)' : 'scaleX(1)' }}
+              style={{
+                width: 'clamp(11px, 5cqw, 56px)',
+                height: 'clamp(13px, 5.9cqw, 66px)',
+                transform: isFlipped.current ? 'scaleX(-1)' : 'scaleX(1)',
+              }}
             >
               {/* Backpack */}
               <rect x="7" y="24" width="12" height="22" rx="3" fill={EXPEDITION_PALETTE.stampGreen} stroke={EXPEDITION_PALETTE.ink} strokeWidth="1.8" />
@@ -634,16 +672,12 @@ export default function ExpeditionMap() {
 
           {isInfoVisible && (
             <div
-              className={`absolute z-40 w-[min(285px,78vw)] rounded-lg border p-4 shadow-xl backdrop-blur-sm transition-all duration-300 ${
-                infoPlacement === 'right'
-                  ? '-translate-x-full'
-                  : infoPlacement === 'center'
-                    ? '-translate-x-1/2'
-                    : ''
-              }`}
+              ref={infoBoxRef}
+              className="absolute z-40 w-[min(285px,78vw)] rounded-lg border p-4 shadow-xl backdrop-blur-sm transition-all duration-300"
               style={{
                 top: `clamp(6%, ${((currentCoords.y - 125) / 450) * 100}%, 58%)`,
                 left: `${(currentCoords.x / 1200) * 100}%`,
+                transform: `translateX(calc(-50% + ${infoOffsetPx}px))`,
                 backgroundColor: withAlpha(isNight ? colors.dark[900] : colors.white, isNight ? 0.86 : 0.78),
                 borderColor: withAlpha(mapAccent, 0.52),
                 color: mapInk,
@@ -684,6 +718,18 @@ export default function ExpeditionMap() {
             </div>
           )}
 
+        </div>
+
+        {/* Mobile-only static instruction (replaces the marker-anchored tooltip, which only makes sense as an overlay on md+) */}
+        <div
+          className="mt-3 flex md:hidden items-center justify-center gap-1.5 text-xs font-semibold"
+          style={{
+            color: EXPEDITION_PALETTE.stampGreen,
+            fontFamily: FONT_MONO,
+          }}
+        >
+          <Info size={12} />
+          Click points for info
         </div>
       </main>
 

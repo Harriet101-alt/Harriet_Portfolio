@@ -206,10 +206,10 @@ const About = () => {
             fixed-width, non-shrinking collage) needs more room than 768px
             provides, which is exactly why the collage got squeezed toward —
             and past — its own right edge specifically in that range. `w-full
-            max-w-[1536px]` scales continuously with the viewport instead
-            (identical to `container` at ≥1536px, its own 2xl cap; strictly
+            max-w-[1800px]` scales continuously with the viewport instead
+            (identical to `container` at ≥1800px, its own 2xl cap; strictly
             more room below that, fixing the squeeze). */}
-        <div className="mx-auto w-full max-w-[1536px] px-4 md:px-6">
+        <div className="mx-auto w-full max-w-[1800px] px-4 md:px-6">
           <div className="flex flex-col md:flex-row justify-between items-start max-w-6xl mx-auto gap-8">
             <div className="text-left w-full md:w-auto">
               <div className="ascii-container justify-start">

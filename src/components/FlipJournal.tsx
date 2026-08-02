@@ -669,10 +669,20 @@ export default function FlipJournal() {
 
   return (
     <div ref={wrapperRef} style={styles.wrapper}>
-      {/* SVG paper-grain filter definition — zero size, never visible */}
+      {/* SVG paper-grain filter definition — zero size, never visible.
+          baseFrequency lowered from 0.9 and explicit filter-region bounds
+          added: iOS/WebKit Safari rasterizes CSS `filter: url(#id)` SVG
+          filters without correctly accounting for device pixel ratio on
+          Retina screens, so a high-frequency feTurbulence pattern gets
+          rasterized coarse then upscaled — reading as a visible blur rather
+          than fine grain. This does not reproduce on desktop Chrome. Lower
+          frequency needs less rasterization detail to look correct, and the
+          explicit x/y/width/height region is a documented mitigation for
+          WebKit's SVG filter tiling/rasterization quirks. Not yet verified
+          on a physical iPhone — recommend on-device confirmation. */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
-        <filter id="paper-grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" />
+        <filter id="paper-grain" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="2" result="noise" />
           <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.025 0" />
         </filter>
       </svg>

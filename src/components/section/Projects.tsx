@@ -19,7 +19,13 @@ const Projects = () => {
   const [draggedStar, setDraggedStar] = useState<number | null>(null);
 
   // the special "drag me" star
-  const [specialStar, setSpecialStar] = useState<{ x: number; y: number }>({ x: 85, y: 8 });
+  const [specialStar, setSpecialStar] = useState<{ x: number; y: number }>(() => {
+    // Below `md` (phone widths ~375-430px) the container has only px-4 side padding, so the
+    // heading + subtitle span almost the full width. Start the star tucked in the top-right
+    // corner, clear of the centered text, instead of the desktop default.
+    const isNarrowViewport = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isNarrowViewport ? { x: 92, y: 4 } : { x: 85, y: 8 };
+  });
   const [isDraggingSpecial, setIsDraggingSpecial] = useState(false);
   const [starOverButton, setStarOverButton] = useState<Element | null>(null);
   const didMoveRef = useRef(false);
@@ -34,15 +40,27 @@ const Projects = () => {
   const isDraggingRef = useRef(false);
   useEffect(() => {
     // Spawn positions once so the interactive field does not jump when the theme changes.
+    // Below `md` (phone widths ~375-430px) the container only has px-4 side padding, so the
+    // heading + subtitle span almost the full width — the same 5-95%/0-10% band the "top area"
+    // stars normally spawn in. Keep those stars clear of the text on narrow viewports only.
+    const isNarrowViewport = typeof window !== 'undefined' && window.innerWidth < 768;
     const generatedStars = Array.from({ length: 30 }, (_, i) => {
       let x, y;
 
       // Keep stars away from the title and cards area (roughly 20-80% horizontally, 15-85% vertically)
       const zone = i % 4;
       if (zone === 0) {
-        // top area - above the title
-        x = Math.random() * 90 + 5;
-        y = Math.random() * 10; // Only in top 10%
+        if (isNarrowViewport) {
+          // Phone widths: pin top-band stars to the outer edges and a touch lower, clear of
+          // the centered heading/subtitle block, instead of the full 5-95% desktop band.
+          const onLeftEdge = Math.random() < 0.5;
+          x = onLeftEdge ? Math.random() * 10 + 3 : Math.random() * 10 + 87; // 3-13% or 87-97%
+          y = Math.random() * 6 + 13; // just below the heading/subtitle, above the cards
+        } else {
+          // top area - above the title
+          x = Math.random() * 90 + 5;
+          y = Math.random() * 10; // Only in top 10%
+        }
       } else if (zone === 1) {
         // bottom area - below the cards
         x = Math.random() * 90 + 5;
