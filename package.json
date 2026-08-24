@@ -7,13 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "responsive:lint": "node scripts/responsive-lint.mjs",
+    "gemini:review": "node --env-file=.env scripts/gemini-review.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-spring/web": "^10.0.1",
     "@use-gesture/react": "^10.3.1",
+    "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "figlet": "^1.8.2",

@@ -31,17 +31,17 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
   };
 
   return (
-    <div className="rounded-lg p-8 mb-8" style={{ 
+    <div className="rounded-lg p-4 sm:p-6 md:p-8 mb-8" style={{
       backgroundColor: themeColors.card.background,
       boxShadow: isDarkMode ? '0 0 20px rgba(0, 0, 0, 0.3)' : '0 0 20px rgba(0, 0, 0, 0.15)'
     }}>
-      <h2 className="text-2xl font-semibold mb-6" style={{ color: themeColors.text.primary }}>Project Snapshots</h2>
+      <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6" style={{ color: themeColors.text.primary }}>Project Snapshots</h2>
       
       <div className="relative">
         {/* Main Image Display with Sliding Animation */}
         <div className="relative rounded-lg overflow-hidden" style={{ 
           backgroundColor: isDarkMode ? themeColors.colors.dark[900] : themeColors.colors.dark[100],
-          height: '600px',
+          height: 'clamp(16rem, 62vw, 37.5rem)',
           maxHeight: '70vh'
         }}>
           <div 
@@ -65,7 +65,7 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
           {/* Navigation Arrows */}
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full shadow-lg transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-300" 
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full shadow-lg transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-300"
             style={{ 
               backgroundColor: isDarkMode 
                 ? `${themeColors.colors.pink[800]}CC` // 80% opacity with hex 
@@ -79,7 +79,7 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
           
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full shadow-lg transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-300" 
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full shadow-lg transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-300"
             style={{ 
               backgroundColor: isDarkMode 
                 ? `${themeColors.colors.pink[800]}CC` // 80% opacity with hex 
@@ -135,21 +135,21 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
       {/* Enlarged Image Modal */}
       {isEnlarged && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2 sm:p-4 md:p-8"
           onClick={() => setIsEnlarged(false)}
         >
-          <div className="relative max-w-[70vw] max-h-[70vh]">
+          <div className="relative w-full max-w-6xl max-h-[85vh]">
             <img
               src={images[currentIndex]}
               alt={`${projectName} screenshot ${currentIndex + 1} enlarged`}
-              className="max-w-full max-h-[70vh] object-contain"
+              className="w-full max-h-[85vh] object-contain"
             />
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsEnlarged(false);
               }}
-              className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
               aria-label="Close enlarged image"
             >
               <X className="h-6 w-6" />
@@ -161,7 +161,7 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
                 e.stopPropagation();
                 goToPrevious();
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -172,7 +172,7 @@ const ImageCarousel = ({ images, projectName }: ImageCarouselProps) => {
                 e.stopPropagation();
                 goToNext();
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
               aria-label="Next image"
             >
               <ChevronRight className="h-6 w-6" />

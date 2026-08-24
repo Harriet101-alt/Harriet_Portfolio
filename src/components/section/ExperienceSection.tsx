@@ -12,9 +12,9 @@ import { portfolioProjects, type PortfolioProject } from '../../data/projects';
 // own light/dark background or text colours (those still come from
 // useThemeColors, same as every other section).
 
-const PUNK_PINK = '#FF1F7D';
-const ACID_GREEN = '#AAFF00';
-const BRUISE = '#3D1A5E';
+const PUNK_PINK = '#EC4999';
+const FOREST_SAGE = '#3a5c3a';
+const MAP_BROWN = '#8a6240';
 const BLUSH = '#FFD6E8';
 
 // Reuse the same "expedition" tones already established in FlipJournal/ExpeditionMap
@@ -27,7 +27,7 @@ const FONT_MONO = '"Courier Prime", "Courier New", monospace';
 const FONT_DISPLAY = '"Playfair Display", Georgia, serif';
 
 const EASE_RESISTANCE = 'cubic-bezier(0.65, 0, 0.35, 1)';
-const FOREST_GREEN = '#2D6A4F';
+const FOREST_GREEN = FOREST_SAGE;
 
 // ─── CONTENT ─────────────────────────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ function HackathonPill({ label, rotation }: { label: string; rotation: number })
     <span
       style={{
         display: 'inline-block',
-        fontSize: '10px',
+        fontSize: '0.625rem',
         fontFamily: FONT_MONO,
         fontWeight: 700,
         letterSpacing: '0.06em',
@@ -166,7 +166,7 @@ function HackathonPill({ label, rotation }: { label: string; rotation: number })
         background: '#fff',
         transform: `rotate(${rotation}deg)`,
         boxShadow: '1px 2px 0 rgba(0,0,0,0.1)',
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
       }}
     >
       <span
@@ -176,7 +176,7 @@ function HackathonPill({ label, rotation }: { label: string; rotation: number })
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          background: ACID_GREEN,
+          background: FOREST_SAGE,
           marginRight: '6px',
           verticalAlign: 'middle',
         }}
@@ -191,18 +191,18 @@ function CategoryPill({ label, rotation }: { label: string; rotation: number }) 
     <span
       style={{
         display: 'inline-block',
-        fontSize: '10px',
+        fontSize: '0.625rem',
         fontFamily: FONT_MONO,
         fontWeight: 700,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
         padding: '4px 11px',
         borderRadius: '999px',
-        border: `1.5px solid ${BRUISE}`,
-        color: BRUISE,
-        background: withAlpha(BRUISE, 0.05),
+        border: `1.5px solid ${MAP_BROWN}`,
+        color: MAP_BROWN,
+        background: withAlpha(MAP_BROWN, 0.05),
         transform: `rotate(${rotation}deg)`,
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
       }}
     >
       {label}
@@ -215,7 +215,7 @@ function ImpactLine({ text }: { text: string }) {
     <p
       style={{
         fontFamily: FONT_MONO,
-        fontSize: '12px',
+        fontSize: '0.75rem',
         color: PUNK_PINK,
         margin: '10px 0 0',
         letterSpacing: '0.01em',
@@ -243,8 +243,8 @@ function ClickHintSticker({ animate }: { animate: boolean }) {
     >
       <div
         style={{
-          fontFamily: '"Caveat", cursive',
-          fontSize: '15px',
+          fontFamily: '"DK Crayonista", "Courier Prime", "Courier New", monospace',
+          fontSize: '0.9375rem',
           color: FOREST_GREEN,
           lineHeight: 1.3,
           transform: 'rotate(-4deg)',
@@ -421,8 +421,8 @@ export default function ExperienceSection() {
 
   const stars = isDarkMode ? darkStars : lightStars;
   const cardBg = isDarkMode ? withAlpha(themeColors.colors.dark[800], 0.85) : withAlpha(themeColors.colors.white, 0.9);
-  const cardBorder = isDarkMode ? withAlpha(BRUISE, 0.5) : themeColors.colors.pink[200];
-  const cardHoverBg = isDarkMode ? withAlpha(BRUISE, 0.3) : BLUSH;
+  const cardBorder = isDarkMode ? withAlpha(MAP_BROWN, 0.5) : themeColors.colors.pink[200];
+  const cardHoverBg = isDarkMode ? withAlpha(MAP_BROWN, 0.18) : BLUSH;
 
   return (
     <section
@@ -465,7 +465,7 @@ export default function ExperienceSection() {
           <p
             style={{
               fontFamily: FONT_MONO,
-              fontSize: '11px',
+              fontSize: '0.6875rem',
               letterSpacing: '0.3em',
               textTransform: 'uppercase',
               color: PUNK_PINK,
@@ -488,7 +488,7 @@ export default function ExperienceSection() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center justify-center gap-8 md:gap-10" style={{ marginBottom: '2rem' }}>
+        <div className="flex flex-wrap items-center justify-center gap-4 xs:gap-6 md:gap-10" style={{ marginBottom: '2rem' }}>
           {([
             { id: 'work' as const, label: 'Work' },
             { id: 'projects' as const, label: 'Projects' },
@@ -502,7 +502,7 @@ export default function ExperienceSection() {
                 onClick={() => setActiveTab(tab.id)}
                 style={{
                   fontFamily: FONT_MONO,
-                  fontSize: '13px',
+                  fontSize: '0.8125rem',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   padding: '6px 2px',
@@ -548,7 +548,7 @@ export default function ExperienceSection() {
                   borderColor={cardBorder}
                   hoverBg={cardHoverBg}
                   header={
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex flex-col xs:flex-row xs:justify-between items-start gap-3 xs:gap-4">
                       <div>
                         <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: '1.15rem', fontWeight: 500, color: isDarkMode ? themeColors.colors.pink[300] : '#1a0a0f', margin: 0 }}>
                           {entry.title}
@@ -558,7 +558,7 @@ export default function ExperienceSection() {
                           {entry.tags.map((t, ti) => <ZineTag key={t} label={t} index={ti} />)}
                         </div>
                       </div>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: '11px', color: themeColors.textSecondary, whiteSpace: 'nowrap' }}>{entry.date}</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: '0.6875rem', color: themeColors.textSecondary }}>{entry.date}</span>
                     </div>
                   }
                   body={
@@ -676,7 +676,7 @@ export default function ExperienceSection() {
                           {entry.degree}
                         </h3>
                         <p style={{ fontSize: '0.9rem', color: themeColors.textSecondary, margin: '2px 0 4px' }}>{entry.institution}</p>
-                        <p style={{ fontFamily: FONT_MONO, fontSize: '11px', color: themeColors.textSecondary, letterSpacing: '0.04em', margin: 0 }}>
+                        <p style={{ fontFamily: FONT_MONO, fontSize: '0.6875rem', color: themeColors.textSecondary, letterSpacing: '0.04em', margin: 0 }}>
                           {entry.result} · {entry.date}
                         </p>
                       </div>

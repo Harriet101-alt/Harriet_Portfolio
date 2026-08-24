@@ -1,3 +1,4 @@
+
 # PORTFOLIO_CONTEXT.md
 
 > Shared context for all Copilot agents working on this repository.
@@ -94,9 +95,12 @@ Warm frosted-glass panels (`rgba(250,246,238,0.72)`), earthy wood action buttons
 | **Lora** | `FONT_BODY` | Serif body in journal/map |
 | **Courier Prime** | `FONT_MONO` | Coordinates, stamps, mono labels |
 | **Georgia** | `HeroGlobe` | Globe info-card body |
+| **Inter** | Google Fonts | Headings only (About section, hero name) — use *strategically for headings ONLY* |
 | System sans stack | `App.css` `body` | Global default body text |
 
-Do **not** introduce Space Grotesk, Inter, or JetBrains Mono — they are not part of this design. Do not add new font families without explicit instruction.
+**⚠️ Inter usage rule:** Inter is for headings only. Do **NOT** use Inter on `ExpeditionMap`, `FlipJournal`, or any cartographic/journal components — these must preserve their serif identity (Playfair Display, Lora, Courier Prime). Inter is a headings accent, not a system font replacement.
+
+Do **not** introduce Space Grotesk, JetBrains Mono, or other sans-serif families without explicit instruction. Do not add new font families without explicit instruction.
 
 ### 4.6 Theming architecture — ⚠️ three access patterns coexist
 
@@ -137,6 +141,7 @@ Structural layers: background world (z 0) → scroll-driven reading overlay (z 1
 | `HeroGlobe.tsx` | WebGL globe (`globe.gl`) with clickable `WAYPOINTS`, fly-to, compact "sticker" mode | Heavy dependency. Has `compact` prop. Don't break the `ResizeObserver` sizing or the `_destructor` cleanup. |
 | `ExpeditionMap.tsx` | ⚠️ Custom SVG route map — pins + self-drawing dashed trail + walking explorer | **FRAGILE.** See §7. Geometry, not styling. |
 | `FlipJournal.tsx` | "Field Notes" flip-book telling the career story (Ecology → MSc → Dev → Hackathon) | Content lives in `getSpreads()`. Shares the cartographic palette + stamps. |
+| `ui/lanyard.tsx` | Swinging conference ID badge in the About section | Hardcoded badge interaction: the profile photo cycles through `profile1`, `profile2`, and `profile3` (`Profile1.png`, `Profile3.JPG`, `Profile4.JPG`) when clicked. Keep the hand-drawn curved "click here" arrow affordance unless explicitly removed. |
 | `AsciiMorphText.tsx` | Hero text where letters drop on strings like marionettes | ⚠️ Hardcodes `color: '#000'` and `fontFamily: 'monospace'` — does **not** adapt to dark mode. Cleanup candidate. |
 | `ImageCarousel.tsx` | Project screenshot carousel + enlarge modal | Pink focus rings; uses `themeColors`. |
 | `DarkModeToggle.tsx` | Sun/Moon theme switch | Uses **direct** `colors` import (not the hook). |
@@ -248,6 +253,7 @@ Keep all on-site copy in Harriet's voice; do not auto-rewrite project descriptio
 8. **Preserve voice.** Don't rewrite personal/project copy.
 9. **Prefer `useThemeColors()`** for new colour usage; flag (don't silently "fix") existing direct-import or hardcoded colour unless asked.
 10. **Don't summarise this file back to the user.** Use it silently as context.
+11. **Preserve `FlipJournal` structure and imagery.** The realistic journal background, book structure, page layout, and photo orientation/placement are part of the set-piece and must be maintained. Text inside the journal may be edited when requested, but do not replace, remove, rotate, or visually flatten the journal images/background without explicit approval.
 
 ---
 

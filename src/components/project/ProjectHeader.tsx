@@ -24,13 +24,13 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   const themeColors = useThemeColors();
 
   return (
-    <div className="rounded-lg shadow-lg p-8 mb-8" style={{ backgroundColor: themeColors.card.background }}>
-      <div className="flex items-start gap-6 mb-6">
-        <img src={icon} alt={title} className="w-24 h-24 rounded-lg" loading="lazy" width="96" height="96" />
+    <div className="rounded-lg shadow-lg p-4 sm:p-6 md:p-8 mb-8" style={{ backgroundColor: themeColors.card.background }}>
+      <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 mb-6">
+        <img src={icon} alt={title} className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-contain aspect-square" loading="lazy" width="96" height="96" />
         <div className="flex-1">
-          <h1 className="text-4xl font-bold mb-2" style={{ color: themeColors.text.primary }}>{title}</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2" style={{ color: themeColors.text.primary }}>{title}</h1>
           <p className="text-lg" style={{ color: themeColors.text.secondary }}>{subtitle}</p>
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-wrap gap-4 mt-4">
             <a
               href={githubUrl}
               target="_blank"

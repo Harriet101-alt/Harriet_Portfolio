@@ -19,7 +19,13 @@ const Projects = () => {
   const [draggedStar, setDraggedStar] = useState<number | null>(null);
 
   // the special "drag me" star
-  const [specialStar, setSpecialStar] = useState<{ x: number; y: number }>({ x: 85, y: 8 });
+  const [specialStar, setSpecialStar] = useState<{ x: number; y: number }>(() => {
+    // Below `md` (phone widths ~375-430px) the container has only px-4 side padding, so the
+    // heading + subtitle span almost the full width. Start the star tucked in the top-right
+    // corner, clear of the centered text, instead of the desktop default.
+    const isNarrowViewport = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isNarrowViewport ? { x: 92, y: 4 } : { x: 85, y: 8 };
+  });
   const [isDraggingSpecial, setIsDraggingSpecial] = useState(false);
   const [starOverButton, setStarOverButton] = useState<Element | null>(null);
   const didMoveRef = useRef(false);
@@ -34,15 +40,27 @@ const Projects = () => {
   const isDraggingRef = useRef(false);
   useEffect(() => {
     // Spawn positions once so the interactive field does not jump when the theme changes.
+    // Below `md` (phone widths ~375-430px) the container only has px-4 side padding, so the
+    // heading + subtitle span almost the full width — the same 5-95%/0-10% band the "top area"
+    // stars normally spawn in. Keep those stars clear of the text on narrow viewports only.
+    const isNarrowViewport = typeof window !== 'undefined' && window.innerWidth < 768;
     const generatedStars = Array.from({ length: 30 }, (_, i) => {
       let x, y;
 
       // Keep stars away from the title and cards area (roughly 20-80% horizontally, 15-85% vertically)
       const zone = i % 4;
       if (zone === 0) {
-        // top area - above the title
-        x = Math.random() * 90 + 5;
-        y = Math.random() * 10; // Only in top 10%
+        if (isNarrowViewport) {
+          // Phone widths: pin top-band stars to the outer edges and a touch lower, clear of
+          // the centered heading/subtitle block, instead of the full 5-95% desktop band.
+          const onLeftEdge = Math.random() < 0.5;
+          x = onLeftEdge ? Math.random() * 10 + 3 : Math.random() * 10 + 87; // 3-13% or 87-97%
+          y = Math.random() * 6 + 13; // just below the heading/subtitle, above the cards
+        } else {
+          // top area - above the title
+          x = Math.random() * 90 + 5;
+          y = Math.random() * 10; // Only in top 10%
+        }
       } else if (zone === 1) {
         // bottom area - below the cards
         x = Math.random() * 90 + 5;
@@ -349,12 +367,12 @@ const Projects = () => {
 
       {/* Static "drag me!" text with arrow */}
       <div
+        className="hidden md:flex"
         style={{
           position: 'absolute',
           left: '85%',
           top: '5%',
           zIndex: 16,
-          display: 'flex',
           alignItems: 'center',
           gap: '8px',
           pointerEvents: 'none'
@@ -374,7 +392,7 @@ const Projects = () => {
         <span
           style={{
             fontFamily: "'DK Crayonista', cursive",
-            fontSize: '26px',
+            fontSize: 'clamp(1.15rem, 2vw, 1.625rem)',
             color: isDarkMode ? themeColors.colors.pink[200] : themeColors.colors.special.dragMe,
             fontWeight: 'bold',
             userSelect: 'none',
@@ -425,7 +443,7 @@ const Projects = () => {
 
       {/* main content container with the project cards */}
       <TooltipProvider delayDuration={200}>
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="flex items-center justify-center gap-1 mb-4">
             <h2 className="text-4xl font-bold" style={{ color: themeColors.text.primary }}>Projects</h2>
             <Tooltip>
@@ -445,7 +463,13 @@ const Projects = () => {
                   />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-gray-800 border-pink-200">
+              <TooltipContent
+                style={{
+                  background: isDarkMode ? themeColors.card.background : 'rgba(245, 240, 232, 0.96)',
+                  color: themeColors.text.primary,
+                  borderColor: themeColors.colors.pink[200],
+                }}
+              >
                 <p>all favicons created by me!</p>
               </TooltipContent>
             </Tooltip>
@@ -457,7 +481,7 @@ const Projects = () => {
           {/* grid layout for project cards */}
           <div
             key={currentPage}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-8"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 max-w-6xl mx-auto mb-8"
             style={{
               animation: `slideIn${direction === 'right' ? 'Right' : 'Left'} 0.4s ease-out`
             }}
@@ -470,7 +494,10 @@ const Projects = () => {
                 <CardHeader>
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <CardTitle className="text-xl transition-colors group-hover:!text-pink-500 dark:group-hover:!text-pink-400">
+                      <CardTitle
+                        className="text-xl transition-colors"
+                        style={{ color: themeColors.text.primary }}
+                      >
                         {project.title}
                       </CardTitle>
                       <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
@@ -493,7 +520,7 @@ const Projects = () => {
                       </Badge>
                     ))}
                   </div>
-                   <div className="flex gap-3" style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                   <div className="flex flex-wrap gap-3" style={{ marginTop: 'auto', paddingTop: '8px' }}>
                     {'isStoryMap' in project && project.isStoryMap ? (
                      <>
                        <button
@@ -549,7 +576,7 @@ const Projects = () => {
                       height="48"
                     />
                     <div className="flex-1">
-                      <CardTitle className="text-xl" style={{ color: themeColors.colors.dark[600] }}>
+                      <CardTitle className="text-xl" style={{ color: themeColors.text.tertiary }}>
                         Coming Soon
                       </CardTitle>
                       <CardDescription className="mt-2" style={{ color: themeColors.text.secondary }}>
@@ -570,7 +597,7 @@ const Projects = () => {
                       TBA
                     </Badge>
                   </div>
-                  <div className="flex gap-3 opacity-30" style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                  <div className="flex flex-wrap gap-3 opacity-30" style={{ marginTop: 'auto', paddingTop: '8px' }}>
                     <div className="project-btn flex items-center gap-1" style={{ pointerEvents: 'none' }}>
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
                       Details

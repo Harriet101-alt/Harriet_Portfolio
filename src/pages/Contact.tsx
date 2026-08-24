@@ -27,7 +27,7 @@ const Contact = () => {
         />
       </div>
       
-      <div className="container mx-auto px-6 max-w-4xl relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 max-w-4xl relative z-10">
         {/* Back Button */}
         <BackButton 
           to="/" 
@@ -38,13 +38,13 @@ const Contact = () => {
 
         {/* Contact Header */}
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" style={{ color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600] }}>Let's Connect!</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4" style={{ color: isDarkMode ? themeColors.colors.pink[300] : themeColors.colors.pink[600] }}>Let's Connect!</h1>
           <p className="text-lg" style={{ color: themeColors.text.secondary }}>
           </p>
         </header>
 
         {/* Contact Cards */}
-        <section className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto" aria-label="Contact methods">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto" aria-label="Contact methods">
           
           {/* Email Card */}
           <a

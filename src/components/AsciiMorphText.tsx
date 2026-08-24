@@ -19,11 +19,11 @@ const AsciiMorphText: React.FC<AsciiMorphTextProps> = ({ text }) => {
       style={{
         fontSize: 'clamp(1.5rem, 5vw, 3rem)',
         fontWeight: 400,
-        fontFamily: 'monospace',
+        fontFamily: '"DK Crayonista", "Courier Prime", "Courier New", monospace',
         letterSpacing: '0.06em',
         textAlign: 'left',
         margin: '0.5rem 0',
-        color: '#000',
+        color: '#000000',
         lineHeight: 1,
         display: 'inline-flex',
         flexWrap: 'nowrap',
@@ -71,7 +71,7 @@ const AsciiMorphText: React.FC<AsciiMorphTextProps> = ({ text }) => {
                 left: '50%',
                 width: '1px',
                 marginLeft: '-0.5px',
-                background: 'rgba(0,0,0,0.65)',
+                background: 'rgba(0, 0, 0, 0.65)',
                 animation: `letterDropString ${DROP_DURATION_MS}ms ease-out ${delay}ms both`,
               }}
             />
